@@ -40,6 +40,53 @@ static UP _sketchCap = 0;
 static UP _sketchCount = 0;
 static MDB_sketch* _sketches = 0;
 
+#ifdef NDEBUG
+#define CheckSketch(s)
+#define CheckSketchNode(s,n)
+#define CheckReadWrite(x)
+#define CheckReadWriteArr(x,c)
+#else
+#define CheckSketch(s) MDB_CheckSketch(s)
+#define CheckSketchNode(s,n) MDB_CheckSketchNode(s,n)
+#define CheckReadWrite(x) MDB_CheckReadWriteMem(&(x),sizeof(x))
+#define CheckReadWriteArr(x,c) MDB_CheckReadWriteMem(x,sizeof(*(x))*(c))
+#endif
+
+void MDB_CheckReadWriteMem(void* start, UP size) {
+    u8* volatile tmp = start;
+    u8** volatile startAddr = &tmp;
+    memmove(*startAddr, start, size);
+}
+
+void MDB_CheckReadMem(void* start, UP size) {
+    u8* volatile tmp = start;
+    u8* volatile* startAddr = &tmp;
+    int c;
+    int* volatile d = &c;
+    *d = memcmp(*startAddr, start, size);
+}
+
+void MDB_CheckSketch(MDB_SKETCH sketch) {
+    assert(sketch && sketch <= _sketchCount);
+    MDB_sketch* s = &_sketches[sketch];
+    assert(s->index == sketch) return 0;
+    assert(s->nodes);
+    CheckReadWriteArr(s->nodes, s->cap);
+}
+
+void MDB_CheckNode(MDB_NODE node) {
+    assert(node);
+    MDB_NODETYPE type = node->type & ~MDB_STETCHFLAG;
+    assert(type == MDB_POCKET || type == MDB_WORLD ||
+        type == MDB_CONST || type == MDB_FORMATION);
+    CheckReadWriteArr(node->n, node->count);
+}
+
+void MDB_CheckSketchNode(MDB_SKETCH sketch, MDB_NODE node) {
+    MDB_CheckNode(node);
+    assert(node->type & MDB_SKETCHFLAG);
+}
+
 MDB_SKETCH __stdcall MDB_StartSketch() {
     if (failFlag) return 0;
     if (_sketchCount == _sketchCap) {
@@ -69,8 +116,8 @@ MDB_SKETCH __stdcall MDB_StartSketch() {
     } else return sketch->index;
 }
 void __stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
-    assert(sketch && sketch <= _sketchCount);
     if (failFlag) return 0;
+    CheckSketch(sketch); CheckSketchNode(sketch, node);
     MDB_sketch* s = &_sketches[sketch];
     assert(s->index == sketch);
     assert(s->nodes[0] == 0);
