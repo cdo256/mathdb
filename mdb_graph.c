@@ -13,6 +13,9 @@ typedef int32_t s32;
 typedef int16_t s16;
 typedef int8_t s8;
 
+#define MDB_SKETCHFLAG 0x0100UL
+#define MDB_NODETYPEMASK 0x00FFUL
+
 typedef uintptr_t UP;
 #define PS (sizeof(void*))
 static_assert(PS == sizeof(UP));
@@ -25,21 +28,59 @@ typedef struct MDB_sketch {
     MDB_NODE* nodes;
 } MDB_sketch;
 
+// strongly-connected component
 typedef struct MDB_scc {
     UP count;
     MDB_NODE n[];
 } MDB_scc;
 
+typedef struct MDB_variable_node {
+    UP count, cap, index;
+    union {
+        MDB_NODE* n;
+        u8* name;
+    };
+} MDB_variable_node;
+
+typedef struct MDB_fixed_node {
+    UP count;
+    MDB_NODE n[];
+};
+
 typedef struct MDB_node {
     MDB_NODETYPE type;
-    u32 count;
-    MDB_NODE n[];
+    union {
+        MDB_scc* g;
+        MDB_SKETCH sketch;
+    }
+    union {
+        MDB_fixed_node f;
+        MDB_variable_node v;
+    };
 } MDB_node;
 
-static UP _sketchCap = 0;
-static UP _sketchCount = 0;
-static MDB_sketch* _sketches = 0;
+static UP _sketchCap;
+static UP _sketchCount;
+static MDB_sketch* _sketches;
 
+typedef struct MDB_id_table {
+    UP count, cap, freeList;
+    UP* a;
+    u8* freeBmp; // reserve but don't use until deinit time
+} MDB_id_table;
+
+
+MDB_id_table _idTable;
+UP _nodeCount;
+
+#define NODE_BASE_SIZE offsetof(MDB_node, v)
+#define NBS NODE_BASE_SIZE
+#define FIXED_NODE_BASE_SIZE (NBS+offsetof(MDB_fixed_node,n))
+#define VARIABLE_NODE_SIZE (NBS+sizeof(MDB_variable_node))
+#define CONST_NODE_SIZE (NBS+PS)
+#define FNBS FIXED_NODE_BASE_SIZE
+
+// Integrity tests
 #ifdef NDEBUG
 #define CheckSketch(s)
 #define CheckSketchNode(s,n)
