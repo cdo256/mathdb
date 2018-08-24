@@ -272,15 +272,17 @@ MDB_NODE MDB_stdcall MDB_CreateConst(const char* name) {
     return node;
 }
 void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
-    if (err) return 0;
-    if (!src->type & MDB_SKETCHFLAG) {
-        error(MDB_INVARG);
-        return 0;
+    if (err) return;
+    UP* slot = &_nodeTable.a[src];
+    MDB_node* n = (MDB_node*)*slot;
+    if (!n->type & MDB_SKETCHFLAG) {
+        error(MDB_EINVARG);
+        return;
     }
-    MDB_node** slot = &_nodeTable.a[src];
-    MDB_node* n = *slot;
     if (n->type & MDB_NODETYPEMASK == MDB_FORM) {
-        
+        if (link == MDB_APPLY) {
+
+        }
     }
 }
 void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node);
