@@ -37,7 +37,7 @@ int Test(int i, int fn, char** const name) {
             MDB_AddLink(eqn, MDB_APPLY, eq);
             MDB_AddLink(eqn, MDB_ARG0, lhs);
             MDB_AddLink(eqn, MDB_ARG1, two);
-            MDB_FinishSketch(sketch);
+            MDB_CommitSketch(sketch);
             MDB_error e;
             int ret = !MDB_GetError(&e);
             MDB_FreeGraph();
@@ -53,7 +53,7 @@ int main() {
     for (int i = 0; i < TEST_COUNT; i++) {
         Test(i,NAME,&s);
         int result = Test(i,RUN,&s);
-        printf("Running test %d (%s): ... ", i, s);
+        printf("Running test %d (%s)... ", i, s);
         if (!result) failCount++;
         printf("%s\n", result ? "passed" : "failed");
     }

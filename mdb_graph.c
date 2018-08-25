@@ -8,7 +8,7 @@
 #define MDB_SKETCHFLAG 0x0100U
 #define MDB_NODETYPEMASK 0x00FFU
 
-static int err = 0;
+static int err = MDB_EUNINIT;
 
 typedef struct MDB_sketch {
     UP count, cap, index;
@@ -49,19 +49,23 @@ const c8 const* _errorStr[] = {
     [MDB_EMEMBIT]="out of memory",
     [MDB_EUNINITBIT]="the graph has not been created",
     [MDB_EINVCALLBIT]="this function call was unexpected",
-    [MDB_INVARGBIT]="a function was called with an invalid argument",
+    [MDB_EINVARGBIT]="a function was called with an invalid argument",
+    [MDB_EINCOMPLETESKETCHBIT]="the sketch is not complete",
 };
 
 s32 MDB_stdcall MDB_GetError(MDB_error* e) {
-    for (int i = 0; i < 32; i++) {
+    if (!err) {
+        e->str = _errorStr[0];
+        e->id = MDB_ENONE;
+        return 0;
+    }
+    for (int i = 0; i < 8*PS; i++) {
         if ((1U<<i)&err) {
             e->str = _errorStr[i];
             e->id = (1U<<i);
             return 1;
         }
     }
-    e->str = _errorStr[0];
-    e->id = MDB_ENONE;
     return 0;
 }
 
@@ -96,7 +100,7 @@ void MDB_stdcall MDB_CreateGraph() {
         return;
     }
     _nodeTable.cap = 65536;
-    _nodeTable.end = 0;
+    _nodeTable.end = 1;
     _nodeTable.freeList = 0;
     _nodeTable.freeBmp = malloc((_nodeTable.cap+7)>>3);
     _nodeTable.a = malloc(_nodeTable.cap*PS);
@@ -110,6 +114,7 @@ void MDB_stdcall MDB_CreateGraph() {
     err = 0;
 }
 void MDB_stdcall MDB_FreeGraph() {
+    // Don't abort on error in cleanup function
     MDB_node_table* t = &_nodeTable;
     memset(t->freeBmp, 0, (t->end+7)>>3);
     for (UP p = t->freeList; p; p = t->a[p]) {
@@ -124,8 +129,9 @@ void MDB_stdcall MDB_FreeGraph() {
     for (UP i = 0; i < _sketchCount; i++)
         free(_sketches[i].nodes);
     free(_sketches);
-    // Forget any errors that may have occrred
-    err = MDB_EUNINIT;
+    // Don't forget any errors that may have occrred.
+    // They must be cleared explicitly with repeated MDB_GetError()'s.
+    err |= MDB_EUNINIT;
 }
 
 MDB_SKETCH MDB_stdcall MDB_StartSketch() {
@@ -157,7 +163,7 @@ void MDB_stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
     if (err) return;
     MDB_sketch* s = &_sketches[sketch];
     assert(s->index == sketch);
-    if (s->nodes[0] == 0) {
+    if (s->nodes[0] != 0) {
         error(MDB_EINVCALL);
         return;
     }
@@ -196,6 +202,10 @@ MDB_NODE MDB_GetNextTableSlot() {
 
 MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
     if (err) return 0;
+    if (type & MDB_SKETCHFLAG || type & MDB_NODETYPEMASK == MDB_CONST) {
+        error(MDB_EINVARG);
+        return 0;
+    }
     MDB_node* n = malloc(sizeof(MDB_node));
     if (!n) {
         error(MDB_EMEM);
@@ -205,7 +215,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
     n->g = 0;
     n->sketch = sketch;
     n->cap = 1; n->count = 0;
-    n->n = malloc(PS);
+    n->n = calloc(PS,1);
     n->name = 0;
     if (!n->n) {
         error(MDB_EMEM);
@@ -228,7 +238,6 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
     MDB_NODE node = MDB_GetNextTableSlot();
     if (!node) {
         free(n->n); free(n);
-        s->count--;
         return 0;
     }
     _nodeTable.a[node] = (UP)n;
@@ -271,21 +280,83 @@ MDB_NODE MDB_stdcall MDB_CreateConst(const char* name) {
     _nodeTable.a[node] = (UP)n;
     return node;
 }
+UP MDB_RoundUp(UP x) {
+    x--;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+#if PS > 4
+    x |= x >> 32;
+#endif
+    return x+1;
+}
 void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     if (err) return;
-    UP* slot = &_nodeTable.a[src];
-    MDB_node* n = (MDB_node*)*slot;
-    if (!n->type & MDB_SKETCHFLAG) {
+    MDB_node* n = (MDB_node*)_nodeTable.a[src];
+
+    MDB_NODETYPE type = n->type & MDB_NODETYPEMASK;
+    if (!(n->type & MDB_SKETCHFLAG) && type != MDB_WORLD) {
         error(MDB_EINVARG);
         return;
     }
-    if (n->type & MDB_NODETYPEMASK == MDB_FORM) {
+    UP idx = 0;
+    if (type == MDB_FORM) {
         if (link == MDB_APPLY) {
-
+            idx = 0;
+        } else if (link & MDB_ARG) {
+            idx = (link & ~MDB_ARG) + 1;
+        } else {
+            error(MDB_EINVARG);
+            return;
+        }
+    } else if (link == MDB_ELEM) {
+        idx = n->count;
+    } else {
+        error(MDB_EINVARG);
+        return;
+    }
+    if (idx >= n->cap) {
+        UP cap = MDB_RoundUp(idx);
+        MDB_NODE* a = realloc(n->n, cap*PS);
+        if (a) {
+            n->n = a;
+            n->cap = cap;
+            for (int i = n->cap; i < cap; i++)
+                n->n[i] = 0;
+        } else {
+            error(MDB_EMEM);
+            return;
         }
     }
+    if (n->n[idx]) {
+        error(MDB_EINVARG);
+        return;
+    }
+    n->n[idx] = dst;
+    n->count++;
 }
-void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node);
-void MDB_stdcall MDB_FinishSketch(MDB_SKETCH sketch) {
-
+void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
+    // Don't abort on error in cleanup function
+}
+void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
+    // Don't abort on error in cleanup function
+    MDB_sketch** slot = &_sketches[sketch];
+    MDB_sketch* s = *slot;
+    for (int i = s->count-1; i >= 0; i--) {
+        MDB_FreeNode(s->nodes[i]);
+    }
+    //TODO(cdo): _sketches freelist
+}
+void MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
+    if (err) return;
+    MDB_sketch* s = &_sketches[sketch];
+    for (int i = 0; i < s->count; i++) {
+        MDB_NODE n = s->nodes[i];
+        if (!n) {
+            error(MDB_EINCOMPLETESKETCH);
+            return;
+        }
+    }
 }

@@ -18,4 +18,6 @@ MDB_DiscardSketch(MDB_SKETCH sketch);
 void MDB_stdcall
 MDB_DiscardLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst);
 void MDB_stdcall
-MDB_FinishSketch(MDB_SKETCH sketch);
+MDB_DiscardSketch(MDB_SKETCH sketch);
+void MDB_stdcall
+MDB_CommitSketch(MDB_SKETCH sketch);
