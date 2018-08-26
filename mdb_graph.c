@@ -120,6 +120,12 @@ void MDB_stdcall MDB_FreeGraph() {
     for (UP p = t->freeList; p; p = t->a[p]) {
         t->freeBmp[p>>3] |= 1 << (p & 7);
     }
+s32 MDB_ReadBit(u8* bmp, UP idx) {
+    return (bmp[idx>>3] >> (idx&7)) & 1;
+}
+void MDB_WriteBit(u8* bmp, UP idx, s32 val) {
+    bmp[idx>>3] = bmp[idx>>3] & ~(1<<(idx&7)) | val<<(idx&7);
+}
     for (UP i = 0; i < t->end; i++) {
         if (t->freeBmp[i>>3] & (1<<(i&7))) {
             MDB_FreeNode(i);
