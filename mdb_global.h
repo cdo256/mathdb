@@ -17,7 +17,7 @@ typedef char c8;
 
 // We only support architectures that have consistent data pointer sizes
 #define UNSUPPORTED "Unsupported architecture: "
-typedef uintptr_t UP;
+typedef uintptr_t UP; // Used basically everywhere
 #define PS (sizeof(void*))
 
 #if UINTPTR_MAX == UINT64_MAX
@@ -27,6 +27,8 @@ typedef uintptr_t UP;
 #else
 #error UNSUPPORTED "data pointer must be either 32bits or 64bits"
 #endif
+static_assert(PS <= sizeof(unsigned long),
+    UNSUPPORTED "unsigned long should be able to contain a pointer");
 static_assert(PS == sizeof(void*), UNSUPPORTED "unexpected data pointer size");
 static_assert(PS == sizeof(char*) && PS == sizeof(long long*),
     UNSUPPORTED "inconsistent data pointer sizes");
