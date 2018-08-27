@@ -18,7 +18,6 @@ typedef char c8;
 // We only support architectures that have consistent data pointer sizes
 #define UNSUPPORTED "Unsupported architecture: "
 typedef uintptr_t UP; // Used basically everywhere
-#define PS (sizeof(void*))
 
 #if UINTPTR_MAX == UINT64_MAX
 #define PS 8

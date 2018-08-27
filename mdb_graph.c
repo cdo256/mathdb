@@ -42,7 +42,7 @@ typedef struct MDB_id_table {
     u8* freeBmp; // reserve but don't use until deinit time
 } MDB_id_table;
 
-inline void* MDB_IdTableEntry(MDB_id_table* const t, UP idx) {
+void* MDB_IdTableEntry(MDB_id_table const* t, UP idx) {
     return (void*)&t->a[idx*t->sz];
 }
 
@@ -84,6 +84,13 @@ void MDB_SignalError(UP type) {
 }
 #define error(t) MDB_SignalError(t)
 
+static inline UP MDB_Min(UP x, UP y) {
+    return x > y ? y : x;
+}
+static inline UP MDB_Max(UP x, UP y) {
+    return x < y ? y : x;
+}
+
 // Frees scc but doesn't update _nodeTable or
 void MDB_FreeNode(MDB_NODE node) {
     MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
@@ -115,7 +122,7 @@ s32 MDB_IntLogPo2(UP x) {
 
 // Duplicates to upper DWORD when using 64bit pointers
 #if PS == 8
-#define REP32(x) ((UP)(x) << 32) | (UP)(x))
+#define REP32(x) (((UP)(x) << 32) | (UP)(x))
 #else
 #define REP32(x) ((UP)(x))
 #endif
@@ -162,7 +169,7 @@ void MDB_stdcall MDB_CreateGraph() {
         error(MDB_EINVCALL);
         return;
     }
-    _nodeTable = MDB_CreateIdTable(UP,65536);
+    _nodeTable = MDB_CreateIdTable(PS,65536);
     _sketchTable = MDB_CreateIdTable(sizeof(MDB_sketch),256);
     if (!_nodeTable.a || !_sketchTable.a) {
         error(MDB_EUNINIT);
@@ -182,20 +189,22 @@ s32 MDB_ReadBit(u8* bmp, UP idx) {
     return (bmp[idx>>3] >> (idx&7)) & 1;
 }
 void MDB_WriteBit(u8* bmp, UP idx, s32 val) {
-    bmp[idx>>3] = bmp[idx>>3] & ~(1<<(idx&7)) | val<<(idx&7);
+    bmp[idx>>3] = (bmp[idx>>3] & ~(1<<(idx&7))) | val<<(idx&7);
 }
 void MDB_stdcall MDB_FreeGraph() {
     // Don't abort on error in cleanup function
     MDB_id_table* t = &_nodeTable;
+    MDB_PopulateFreeBmp(t);
     for (UP i = 0; i < t->end; i++) {
-        if (MDB_ReadBit(t, i)) {
+        if (MDB_ReadBit(t->freeBmp, i)) {
             MDB_FreeNode(i);
         }
     }
     MDB_FreeIdTable(t);
     t = &_sketchTable;
-    for (UP i = 0; i < _sketchCount; i++)
-        free(MDB_IdTableEntry(t, i)->nodes);
+    MDB_PopulateFreeBmp(t);
+    for (UP i = 0; i < t->end; i++) if (MDB_ReadBit(t->freeBmp, i))
+        free(((MDB_sketch*)MDB_IdTableEntry(t, i))->nodes);
     MDB_FreeIdTable(t);
     // We will not forget errors that may have occrred during this graph's lifetime.
     // They must be cleared explicitly with repeated MDB_GetError()'s.
@@ -214,7 +223,7 @@ UP MDB_AllocTableSlot(MDB_id_table* t) {
                 error(MDB_EINTOVERFLOW);
                 return 0;
             }
-            UP* a = realloc(t->a, cap*t->sz);
+            u8* a = realloc(t->a, cap*t->sz);
             u8* bmp = malloc((cap+7)>>3);
             if (!a || !bmp) {
                 error(MDB_EMEM);
@@ -242,7 +251,8 @@ MDB_SKETCH MDB_stdcall MDB_StartSketch() {
     s->nodes = calloc(s->cap, PS); // need zero-ing
     if (!s->nodes) {
         error(MDB_EMEM);
-        MDB_FreeTableSlot(&_sketchTable, sketch);
+        *(UP*)s = _sketchTable.freeList;
+        _sketchTable.freeList = sketch;
         return 0;
     } else return sketch;
 }
@@ -264,7 +274,7 @@ void MDB_stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
 
 MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
     if (_state) return 0;
-    if (type & MDB_SKETCHFLAG || type & MDB_NODETYPEMASK == MDB_CONST) {
+    if (type & MDB_SKETCHFLAG || (type & MDB_NODETYPEMASK) == MDB_CONST) {
         error(MDB_EINVARG);
         return 0;
     }
@@ -284,9 +294,9 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         free(n);
         return 0;
     }
-    MDB_sketch* s = MDB_IdTaleEntry(_sketchTable, sketch);
+    MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, sketch);
     if (s->count == s->cap) {
-        UP cap = cap * 2;
+        UP cap = s->cap * 2;
         if (s->cap > cap) {
             error(MDB_EINTOVERFLOW);
             return 0;
@@ -301,16 +311,16 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         s->nodes = nodes;
     }
     n->index = s->count;
-    MDB_NODE node = MDB_AllocTableSlot(_nodeTable);
+    MDB_NODE node = MDB_AllocTableSlot(&_nodeTable);
     if (!node) {
         free(n->n); free(n);
         return 0;
     }
-    _nodeTable.a[node] = (UP)n;
+    *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node) = n;
     s->nodes[s->count++] = node;
     return node;
 }
-MDB_NODE MDB_stdcall MDB_CreateConst(char* const name) {
+MDB_NODE MDB_stdcall MDB_CreateConst(char const* name) {
     if (_state) return 0;
     MDB_node* n = malloc(sizeof(MDB_node));
     if (!n) {
@@ -391,15 +401,16 @@ void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     n->n[idx] = dst;
     n->count++;
 }
+
 void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
     // Don't abort on error in cleanup function
     void* slot = MDB_IdTableEntry(&_nodeTable, node);
-    MDB_node* n = *(node**)slot;
+    MDB_node* n = *(MDB_node**)slot;
     MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, n->sketch);
     assert(s->nodes[n->index] == node);
     s->nodes[n->index] = s->nodes[--s->count];
-    assert(s->nodes[n->index])
-    ((node*)MDN_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
+    assert(s->nodes[n->index]);
+    ((MDB_node*)MDB_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
     s->nodes[s->count] = 0;
     MDB_FreeNode(node);
     *(UP*)slot = _nodeTable.freeList;
@@ -408,7 +419,7 @@ void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
 void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
     // Don't abort on error in cleanup function
     void* slot = MDB_IdTableEntry(&_sketchTable, sketch);
-    MDB_sketch* s = (MDN_sketch*)slot;
+    MDB_sketch* s = (MDB_sketch*)slot;
     for (UP i = 0; i < s->cap; i++) {
         MDB_FreeNode(s->nodes[i]);
     }
@@ -420,23 +431,76 @@ typedef struct MDB_scc_sketch_node_info {
     s32 onStack;
     UP sccIndex;
     UP lowLink;
+    MDB_scc* g;
 } MDB_scc_sketch_node_info;
 
-void MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP* stack, UP* sp) {
-    MDB_node* n = MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
+s32 MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP* stack, UP* sp) {
+    MDB_node* v = MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
     a[i].sccIndex = a[i].lowLink = *index;
-    a[i].onStack = 1;
+    a[i].onStack = 1; a[i].g = 0;
     *index += 1;
     stack[(*sp)++] = i;
-    for (UP j = 0; j < n->count; j++) {
-        
+    // For each child
+    for (MDB_NODE* child = v->n; child < v->n + v->count; child++) {
+        MDB_node* w = MDB_IdTableEntry(&_nodeTable, *child);
+        if (w->sketch != s->index) { // can't link to different uncommitted sketch
+            error(MDB_EINVCALL);
+            return 0;
+        }
+        if (a[w->index].sccIndex == 0) {
+            if (!MDB_SCCStep(w->index, s, a, index, stack, sp)) return 0;
+            a[i].lowLink = MDB_Min(a[i].lowLink, a[w->index].lowLink);
+        } else if (a[w->index].onStack) {
+            a[i].lowLink = MDB_Min(a[i].lowLink, a[w->index].sccIndex);
+        }
     }
+    // are we a root node?
+    if (a[i].lowLink == a[i].sccIndex) {
+        MDB_scc* g = malloc(sizeof(MDB_scc));
+        if (!g) {
+            error(MDB_EMEM);
+            return 0;
+        } else a[i].g = g;
+        //TODO(cdo): can we pre-determine the scc size? Maybe by keeping track
+        // of position in stack instead of the boolean 'onStack'.
+        UP cap = 32;
+        g->count = 0;
+        g->n = malloc(cap*PS);
+        if (!g->n) {
+            error(MDB_EMEM);
+            free(g);
+            a[i].g = 0; //TODO(cdo): is this needed? Aren't we going to discard
+                        // the array on failure regardless?
+            return 0;
+        }
+        UP j;
+        do {
+            j = stack[--*sp];
+            a[j].onStack = 0;
+            if (g->count == cap) {
+                UP newCap = cap*2;
+                MDB_NODE* nodes = realloc(g->n, newCap*PS);
+                if (!nodes) {
+                    error(MDB_EMEM);
+                    free(g->n); free(g);
+                    return 0;
+                }
+                g->n = nodes;
+                cap = newCap;
+            }
+            g->n[g->count++] = s->nodes[j];
+        } while (j!=i);
+        MDB_NODE* nodes = realloc(g->n, g->count*PS);
+        if (nodes) g->n = nodes;
+    }
+    return 1;
 }
 
 // returns 0 iff failed to commit
 s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
     if (_state) return 0;
-    MDB_sketch* s = (MDB_sketch*)MDB_IdTableEntry(&_sketchTable, sketch);
+    void* slot = MDB_IdTableEntry(&_sketchTable, sketch);
+    MDB_sketch* s = (MDB_sketch*)slot;
     for (UP i = 0; i < s->count; i++) {
         MDB_NODE n = s->nodes[i];
         if (!n) {
@@ -445,8 +509,9 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
         }
     }
     // Tarjan's SCC algorithm
-    MDB_scc_sketch_node_info* a = calloc(s->count+1,sizeof(MDB_scc_sketch_node_info));
-    MDB_scc_sketch_node_info* stack = calloc(s->count+1,sizeof(MDB_scc_sketch_node_info));
+    MDB_scc_sketch_node_info* a =
+        calloc(s->count+1,sizeof(MDB_scc_sketch_node_info));
+    UP* stack = malloc(s->count*PS);
     if (!a || !stack) {
         error(MDB_EMEM);
         free(a); free(stack);
@@ -454,8 +519,24 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
     }
     UP index = 1;
     UP sp = 0;
-    for (UP i = 0; i < s->count; i++)
-        if (!indices[i]) MDB_SCCStep(i, s, a, &index, stack, sp);
-    // Compute SCCs
-    // Shrink allocated node lists for variable nodes and remove sketch only junk
+    for (UP i = 0; i < s->count; i++) if (!a[i].sccIndex)
+        if (!MDB_SCCStep(i, s, a, &index, stack, &sp)) {
+            free(a); free(stack);
+            return 0;
+        }
+    for (UP i = 0; i < s->count; i++) {
+        assert(a[i].g);
+        MDB_node* n = MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
+        n->sketch = 0; n->index = 0;
+        n->type &= ~MDB_SKETCHFLAG;
+        if (n->type != MDB_WORLD) { // shrink wrap
+            MDB_NODE* a = realloc(n->n, PS*n->count);
+            if (a) { n->n = a; n->cap = n->count; }
+        }
+        n->g = a[i].g;
+    }
+    free(a); free(stack);
+    *(UP*)slot = _sketchTable.freeList;
+    _sketchTable.freeList = sketch;
+    return 1;
 }

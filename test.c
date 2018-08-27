@@ -43,7 +43,7 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return ret;
         } return FAIL;
-        default: printf("\nInvalid test id.\n");
+        default: printf("\nInvalid test id.\n"); return FAIL;
     }
 }
 
