@@ -56,11 +56,11 @@ int Test(int i, int fn, char** const name) {
             if (strcmp("2", str) || t != MDB_CONST || childCount != 0) return FAIL;
             MDB_GetNodeInfo(lhs, &t, &childCount, &str);
             if (MDB_GetChildren(lhs, 0, 3, c) != 3) return FAIL;
-            if (str || t != MDB_CONST || childCount != 3 ||
+            if (str || t != MDB_FORM || childCount != 3 ||
                 c[0] != plus || c[1] != one || c[2] != one) return FAIL;
             MDB_GetNodeInfo(eqn, &t, &childCount, &str);
             if (MDB_GetChildren(eqn, 0, 3, c) != 3) return FAIL;
-            if (str || t != MDB_CONST || childCount != 3 ||
+            if (str || t != MDB_FORM || childCount != 3 ||
                 c[0] != eq || c[1] != lhs || c[2] != two) return FAIL;
 
             if (MDB_GetError(&e)) return FAIL;

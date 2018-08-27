@@ -1,6 +1,7 @@
 #include "mdb_global.h"
 #include "mdb_graph.h"
 #include "mdb_edit_graph.h" //IMPLEMENTS
+#include "mdb_read_graph.h" //IMPLEMENTS
 #include "mdb_error.h"
 #include <stdlib.h>
 #include <string.h>
@@ -410,7 +411,7 @@ void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
     assert(s->nodes[n->index] == node);
     s->nodes[n->index] = s->nodes[--s->count];
     assert(s->nodes[n->index]);
-    ((MDB_node*)MDB_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
+    (*(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
     s->nodes[s->count] = 0;
     MDB_FreeNode(node);
     *(UP*)slot = _nodeTable.freeList;
@@ -435,15 +436,15 @@ typedef struct MDB_scc_sketch_node_info {
 } MDB_scc_sketch_node_info;
 
 s32 MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP* stack, UP* sp) {
-    MDB_node* v = MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
+    MDB_node* v = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
     a[i].sccIndex = a[i].lowLink = *index;
     a[i].onStack = 1; a[i].g = 0;
     *index += 1;
     stack[(*sp)++] = i;
     // For each child
     for (MDB_NODE* child = v->n; child < v->n + v->count; child++) {
-        MDB_node* w = MDB_IdTableEntry(&_nodeTable, *child);
-        if (w->sketch != s->index) { // can't link to different uncommitted sketch
+        MDB_node* w = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, *child);
+        if (w->sketch && w->sketch != s->index) { // can't link to different uncommitted sketch
             error(MDB_EINVCALL);
             return 0;
         }
@@ -488,6 +489,7 @@ s32 MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP*
                 g->n = nodes;
                 cap = newCap;
             }
+            a[j].g = g;
             g->n[g->count++] = s->nodes[j];
         } while (j!=i);
         MDB_NODE* nodes = realloc(g->n, g->count*PS);
@@ -526,7 +528,7 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
         }
     for (UP i = 0; i < s->count; i++) {
         assert(a[i].g);
-        MDB_node* n = MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
+        MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
         n->sketch = 0; n->index = 0;
         n->type &= ~MDB_SKETCHFLAG;
         if (n->type != MDB_WORLD) { // shrink wrap
@@ -539,4 +541,38 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
     *(UP*)slot = _sketchTable.freeList;
     _sketchTable.freeList = sketch;
     return 1;
+}
+
+
+void MDB_stdcall
+MDB_GetNodeInfo(MDB_NODE node,
+    MDB_NODETYPE* type, uintptr_t* childCount, char** str) {
+
+    if (_state) {
+        *type = MDB_INVALIDNODETYPE;
+        *childCount = 0;
+        *str = 0;
+        return;
+    }
+    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    *type = n->type;
+    *childCount = n->count;
+    *str = (char*)n->name;
+}
+
+// returns number of children written
+uintptr_t MDB_stdcall
+MDB_GetChildren(MDB_NODE node,
+    uintptr_t startIndex, uintptr_t bufferCount, MDB_NODE* buffer) {
+
+    if (_state) return 0;
+
+    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    if (n->count <= startIndex) {
+        error(MDB_EINVARG);
+        return 0;
+    }
+    UP count = MDB_Min(n->count - startIndex, bufferCount);
+    memcpy(buffer, n->n+startIndex, count*PS);
+    return count;
 }
