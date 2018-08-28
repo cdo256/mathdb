@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TEST_COUNT 2
+#define TEST_COUNT 3
 #define PASS 1
 #define FAIL 0
 
@@ -67,6 +67,39 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
+        case 2: { *name = "simple cycle";
+            if (fn == NAME) return PASS;
+            MDB_error e;
+            MDB_CreateGraph();
+            MDB_SKETCH sketch = MDB_StartSketch();
+            MDB_NODE x = MDB_CreateConst("x");
+            MDB_NODE y = MDB_SketchNode(sketch, MDB_FORM);
+            MDB_NODE z = MDB_SketchNode(sketch, MDB_POCKET);
+            MDB_AddLink(y, MDB_APPLY, x);
+            MDB_AddLink(y, MDB_ARG0, z);
+            MDB_AddLink(z, MDB_ELEM, y);
+            MDB_CommitSketch(sketch);
+            if (MDB_GetError(&e)) return FAIL;
+            MDB_NODETYPE t;
+            uintptr_t childCount;
+            char* str;
+            MDB_NODE c[2];
+            MDB_GetNodeInfo(x, &t, &childCount, &str);
+            if (strcmp("x", str) || t != MDB_CONST || childCount != 0) return FAIL;
+            MDB_GetNodeInfo(y, &t, &childCount, &str);
+            if (MDB_GetChildren(y, 0, 2, c) != childCount) return FAIL;
+            if (str || t != MDB_FORM || childCount != 2 ||
+                c[0] != x || c[1] != z) return FAIL;
+            MDB_GetNodeInfo(z, &t, &childCount, &str);
+            if (MDB_GetChildren(z, 0, 1, c) != childCount) return FAIL;
+            if (str || t != MDB_POCKET || childCount != 1 ||
+                c[0] != y) return FAIL;
+
+            if (MDB_GetError(&e)) return FAIL;
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
+
         default: printf("\nInvalid test id.\n"); return FAIL;
     }
 }
