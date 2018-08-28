@@ -75,6 +75,7 @@ int Test(int i, int fn, char** const name) {
             MDB_NODE x = MDB_CreateConst("x");
             MDB_NODE y = MDB_SketchNode(sketch, MDB_FORM);
             MDB_NODE z = MDB_SketchNode(sketch, MDB_POCKET);
+            MDB_SetSketchRoot(sketch, y);
             MDB_AddLink(y, MDB_APPLY, x);
             MDB_AddLink(y, MDB_ARG0, z);
             MDB_AddLink(z, MDB_ELEM, y);
