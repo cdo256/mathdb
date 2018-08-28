@@ -257,6 +257,11 @@ MDB_SKETCH MDB_stdcall MDB_StartSketch() {
         return 0;
     } else return sketch;
 }
+void MDB_MoveSketchNode(MDB_sketch* s, MDB_NODE node, UP idx) {
+    s->nodes[idx] = node;
+    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    n->index = idx;
+}
 void MDB_stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
     if (_state) return;
     MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, sketch);
@@ -265,12 +270,13 @@ void MDB_stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
         error(MDB_EINVCALL);
         return;
     }
-    s->nodes[0] = node;
+    UP oldIndex = (*(MDB_node**)MDB_IdTableEntry(&_nodeTable, node))->index;
+    MDB_MoveSketchNode(s, node, 0);
     if (s->count <= 1) {
         error(MDB_EINVCALL);
         return;
     }
-    s->nodes[node] = s->nodes[s->count--];
+    MDB_MoveSketchNode(s, s->nodes[--s->count], oldIndex);
 }
 
 MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
