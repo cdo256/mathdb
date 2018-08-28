@@ -105,17 +105,30 @@ int Test(int i, int fn, char** const name) {
     }
 }
 
-int main() {
-    int failCount = 0;
+// returns 1 iff the test succeeded
+int RunTest(int id) {
     char* s;
-    for (int i = 0; i < TEST_COUNT; i++) {
-        Test(i,NAME,&s);
-        printf("Test %d (%s): ", i, s);
-        int result = Test(i,RUN,&s);
-        MDB_error e;
-        while (MDB_GetError(&e)); // Clear errors
-        if (!result) failCount++;
-        printf("%s\n", result ? "passed" : "failed");
+    Test(id,NAME,&s);
+    printf("Test %d (%s): ", id, s);
+    int result = Test(id,RUN,&s);
+    MDB_error e;
+    while (MDB_GetError(&e)); // Clear errors
+    printf("%s\n", result ? "passed" : "FAILED");
+    return result;
+}
+
+int main(int argc, char const* const* argv) {
+    int failCount = 0;
+    if (argc > 1) { // args are a list of test numbers
+        for (int i = 1; i < argc; i++) {
+            int id;
+            sscanf(argv[i], "%d", &id);
+            failCount += !RunTest(id);
+        }
+    } else { // if no args supplied run all tests
+        for (int i = 0; i < TEST_COUNT; i++) {
+            failCount += !RunTest(i);
+        }
     }
     if (failCount == 0)
         printf("All tests passed");
