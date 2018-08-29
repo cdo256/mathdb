@@ -116,7 +116,8 @@ int Test(int i, int fn, char** const name) {
             MDB_AddLink(v1, MDB_APPLY, k);
             MDB_AddLink(v1, MDB_ARG0, v0);
             MDB_AddLink(v2, MDB_APPLY, k);
-            MDB_AddLink(v2, MDB_ARG1, v1);
+            MDB_AddLink(v2, MDB_ARG0, v1);
+            MDB_SetSketchRoot(sketch, v2);
             MDB_CommitSketch(sketch);
             MDB_AddLink(w, MDB_ELEM, v0);
             MDB_AddLink(w, MDB_ELEM, v1);
