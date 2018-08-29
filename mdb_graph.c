@@ -415,10 +415,13 @@ void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
     MDB_node* n = *(MDB_node**)slot;
     MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, n->sketch);
     assert(s->nodes[n->index] == node);
-    s->nodes[n->index] = s->nodes[--s->count];
-    assert(s->nodes[n->index]);
-    (*(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
-    s->nodes[s->count] = 0;
+    if (n->index == 0) s->nodes[0] = 0; // don't decrement count if n is the root node
+    else {
+        s->nodes[n->index] = s->nodes[--s->count];
+        assert(s->nodes[n->index]);
+        (*(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
+        s->nodes[s->count] = 0;
+    }
     MDB_FreeNode(node);
     *(UP*)slot = _nodeTable.freeList;
     _nodeTable.freeList = node;
@@ -428,7 +431,8 @@ void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
     void* slot = MDB_IdTableEntry(&_sketchTable, sketch);
     MDB_sketch* s = (MDB_sketch*)slot;
     for (UP i = 0; i < s->cap; i++) {
-        MDB_FreeNode(s->nodes[i]);
+        if (s->nodes[i])
+            MDB_FreeNode(s->nodes[i]);
     }
     *(UP*)slot = _sketchTable.freeList;
     _sketchTable.freeList = sketch;
