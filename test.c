@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TEST_COUNT 4
+#define TEST_COUNT 6
 #define PASS 1
 #define FAIL 0
 
@@ -15,7 +15,7 @@
 int Test(int i, int fn, char** const name) {
     switch (i) {
         case 0: { *name = "create free";
-            if (fn == NAME) return PASS;
+            if (fn == NAME) return -1;
             MDB_CreateGraph();
             MDB_error e;
             int ret = !MDB_GetError(&e);
@@ -23,7 +23,7 @@ int Test(int i, int fn, char** const name) {
             return ret;
         } return FAIL;
         case 1: { *name = "basic formation construction";
-            if (fn == NAME) return PASS;
+            if (fn == NAME) return -1;
             MDB_CreateGraph();
             MDB_SKETCH sketch = MDB_StartSketch();
             MDB_NODE plus = MDB_CreateConst("+");
@@ -68,7 +68,7 @@ int Test(int i, int fn, char** const name) {
             return PASS;
         } return FAIL;
         case 2: { *name = "simple cycle";
-            if (fn == NAME) return PASS;
+            if (fn == NAME) return -1;
             MDB_error e;
             MDB_CreateGraph();
             MDB_SKETCH sketch = MDB_StartSketch();
@@ -101,7 +101,7 @@ int Test(int i, int fn, char** const name) {
             return PASS;
         } return FAIL;
         case 3: { *name = "simple world";
-            if (fn == NAME) return PASS;
+            if (fn == NAME) return -1;
             MDB_error e;
             MDB_CreateGraph();
             MDB_SKETCH sketch = MDB_StartSketch();
@@ -143,6 +143,39 @@ int Test(int i, int fn, char** const name) {
             if (MDB_GetChildren(w, 0, childCount, c) != childCount) return FAIL;
             if (str || t != MDB_WORLD || childCount != 3 ||
                 c[0] != v0 || c[1] != v1 || c[2] != v2) return FAIL;
+            if (MDB_GetError(&e)) return FAIL;
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
+        case 4: { *name = "discard sketch node";
+            if (fn == NAME) return -1;
+            MDB_error e;
+            MDB_CreateGraph();
+            MDB_SKETCH sketch = MDB_StartSketch();
+            MDB_NODE n1 = MDB_SketchNode(sketch, MDB_WORLD);
+            MDB_NODE n2 = MDB_SketchNode(sketch, MDB_FORM);
+            MDB_SetSketchRoot(sketch, n1);
+            MDB_DiscardSketchNode(sketch);
+            MDB_NODE n3 = MDB_SketchNode(sketch, MDB_POCKET);
+            MDB_SetSketchRoot(sketch, n3);
+            MDB_CommitSketch(sketch);
+            if (MDB_GetError(&e)) return FAIL;
+            MDB_NODETYPE t;
+            uintptr_t childCount;
+            char* str;
+            MDB_GetNodeInfo(n2, &t, &childCount, &str);
+            if (t != MDB_FORM) return FAIL;
+            MDB_GetNodeInfo(n3, &t, &childCount, &str);
+            if (t != MDB_POCKET) return FAIL;
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
+        case 5: { *name = "discard sketch";
+            if (fn == NAME) return -1;
+            MDB_error e;
+            MDB_CreateGraph();
+            MDB_SKETCH sketch = MDB_StartSketch();
+            MDB_DiscardSketch(sketch);
             if (MDB_GetError(&e)) return FAIL;
             MDB_FreeGraph();
             return PASS;
