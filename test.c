@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define TEST_COUNT 3
+#define TEST_COUNT 4
 #define PASS 1
 #define FAIL 0
 
@@ -100,7 +100,52 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
-
+        case 3: { *name = "simple world";
+            if (fn == NAME) return PASS;
+            MDB_error e;
+            MDB_CreateGraph();
+            MDB_SKETCH sketch = MDB_StartSketch();
+            MDB_NODE w = MDB_SketchNode(sketch, MDB_WORLD);
+            MDB_SetSketchRoot(sketch, w);
+            MDB_CommitSketch(sketch);
+            sketch = MDB_StartSketch();
+            MDB_NODE k = MDB_CreateConst("k");
+            MDB_NODE v0 = MDB_CreateConst("v0");
+            MDB_NODE v1 = MDB_SketchNode(sketch, MDB_FORM);
+            MDB_NODE v2 = MDB_SketchNode(sketch, MDB_FORM);
+            MDB_AddLink(v1, MDB_APPLY, k);
+            MDB_AddLink(v1, MDB_ARG0, v0);
+            MDB_AddLink(v2, MDB_APPLY, k);
+            MDB_AddLink(v2, MDB_ARG1, v1);
+            MDB_CommitSketch(sketch);
+            MDB_AddLink(w, MDB_ELEM, v0);
+            MDB_AddLink(w, MDB_ELEM, v1);
+            MDB_AddLink(w, MDB_ELEM, v2);
+            if (MDB_GetError(&e)) return FAIL;
+            MDB_NODETYPE t;
+            uintptr_t childCount;
+            char* str;
+            MDB_NODE c[3];
+            MDB_GetNodeInfo(k, &t, &childCount, &str);
+            if (strcmp("k", str)) return FAIL;
+            MDB_GetNodeInfo(v0, &t, &childCount, &str);
+            if (strcmp("v0", str)) return FAIL;
+            MDB_GetNodeInfo(v1, &t, &childCount, &str);
+            if (MDB_GetChildren(v1, 0, childCount, c) != childCount) return FAIL;
+            if (str || t != MDB_FORM || childCount != 2 ||
+                c[0] != k || c[1] != v0) return FAIL;
+            MDB_GetNodeInfo(v2, &t, &childCount, &str);
+            if (MDB_GetChildren(v2, 0, childCount, c) != childCount) return FAIL;
+            if (str || t != MDB_FORM || childCount != 2 ||
+                c[0] != k || c[1] != v1) return FAIL;
+            MDB_GetNodeInfo(w, &t, &childCount, &str);
+            if (MDB_GetChildren(w, 0, childCount, c) != childCount) return FAIL;
+            if (str || t != MDB_WORLD || childCount != 3 ||
+                c[0] != v0 || c[1] != v1 || c[2] != v2) return FAIL;
+            if (MDB_GetError(&e)) return FAIL;
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
         default: printf("\nInvalid test id.\n"); return FAIL;
     }
 }
