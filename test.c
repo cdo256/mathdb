@@ -2,8 +2,10 @@
 #include "mdb_edit_graph.h"
 #include "mdb_get_error.h"
 #include "mdb_read_graph.h"
+#include "mdb_get_mem_info.h"
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 #define TEST_COUNT 6
 #define PASS 1
@@ -11,6 +13,9 @@
 
 #define NAME 0
 #define RUN 1
+
+#define check assert
+//#define check(x) do if (!(x)) { assert(0); return FAIL; } while(0)
 
 int Test(int i, int fn, char** const name) {
     switch (i) {
@@ -41,29 +46,29 @@ int Test(int i, int fn, char** const name) {
             MDB_AddLink(eqn, MDB_ARG1, two);
             MDB_CommitSketch(sketch);
             MDB_error e;
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_NODETYPE t;
             uintptr_t childCount;
             char* str;
             MDB_NODE c[3];
             MDB_GetNodeInfo(eq, &t, &childCount, &str);
-            if (strcmp("=", str) || t != MDB_CONST || childCount != 0) return FAIL;
+            check(!strcmp("=", str) && t == MDB_CONST && childCount == 0);
             MDB_GetNodeInfo(plus, &t, &childCount, &str);
-            if (strcmp("+", str) || t != MDB_CONST || childCount != 0) return FAIL;
+            check(!strcmp("+", str) && t == MDB_CONST && childCount == 0);
             MDB_GetNodeInfo(one, &t, &childCount, &str);
-            if (strcmp("1", str) || t != MDB_CONST || childCount != 0) return FAIL;
+            check(!strcmp("1", str) && t == MDB_CONST && childCount == 0);
             MDB_GetNodeInfo(two, &t, &childCount, &str);
-            if (strcmp("2", str) || t != MDB_CONST || childCount != 0) return FAIL;
+            check(!strcmp("2", str) && t == MDB_CONST && childCount == 0);
             MDB_GetNodeInfo(lhs, &t, &childCount, &str);
-            if (MDB_GetChildren(lhs, 0, 3, c) != 3) return FAIL;
-            if (str || t != MDB_FORM || childCount != 3 ||
-                c[0] != plus || c[1] != one || c[2] != one) return FAIL;
+            check(MDB_GetChildren(lhs, 0, 3, c) == 3);
+            check(!str && t == MDB_FORM && childCount == 3 &&
+                c[0] == plus && c[1] == one && c[2] == one);
             MDB_GetNodeInfo(eqn, &t, &childCount, &str);
-            if (MDB_GetChildren(eqn, 0, 3, c) != 3) return FAIL;
-            if (str || t != MDB_FORM || childCount != 3 ||
-                c[0] != eq || c[1] != lhs || c[2] != two) return FAIL;
+            check(MDB_GetChildren(eqn, 0, 3, c) == 3);
+            check(!str && t == MDB_FORM && childCount == 3 &&
+                c[0] == eq && c[1] == lhs && c[2] == two);
 
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
@@ -80,23 +85,23 @@ int Test(int i, int fn, char** const name) {
             MDB_AddLink(y, MDB_ARG0, z);
             MDB_AddLink(z, MDB_ELEM, y);
             MDB_CommitSketch(sketch);
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_NODETYPE t;
             uintptr_t childCount;
             char* str;
             MDB_NODE c[2];
             MDB_GetNodeInfo(x, &t, &childCount, &str);
-            if (strcmp("x", str) || t != MDB_CONST || childCount != 0) return FAIL;
+            check(!strcmp("x", str) && t == MDB_CONST && childCount == 0);
             MDB_GetNodeInfo(y, &t, &childCount, &str);
-            if (MDB_GetChildren(y, 0, 2, c) != childCount) return FAIL;
-            if (str || t != MDB_FORM || childCount != 2 ||
-                c[0] != x || c[1] != z) return FAIL;
+            check(MDB_GetChildren(y, 0, 2, c) == childCount);
+            check(!str && t == MDB_FORM && childCount == 2 &&
+                c[0] == x && c[1] == z);
             MDB_GetNodeInfo(z, &t, &childCount, &str);
-            if (MDB_GetChildren(z, 0, 1, c) != childCount) return FAIL;
-            if (str || t != MDB_POCKET || childCount != 1 ||
-                c[0] != y) return FAIL;
+            check(MDB_GetChildren(z, 0, 1, c) == childCount);
+            check(!str && t == MDB_POCKET && childCount == 1 &&
+                c[0] == y);
 
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
@@ -122,28 +127,28 @@ int Test(int i, int fn, char** const name) {
             MDB_AddLink(w, MDB_ELEM, v0);
             MDB_AddLink(w, MDB_ELEM, v1);
             MDB_AddLink(w, MDB_ELEM, v2);
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_NODETYPE t;
             uintptr_t childCount;
             char* str;
             MDB_NODE c[3];
             MDB_GetNodeInfo(k, &t, &childCount, &str);
-            if (strcmp("k", str)) return FAIL;
+            check(!strcmp("k", str));
             MDB_GetNodeInfo(v0, &t, &childCount, &str);
-            if (strcmp("v0", str)) return FAIL;
+            check(!strcmp("v0", str));
             MDB_GetNodeInfo(v1, &t, &childCount, &str);
-            if (MDB_GetChildren(v1, 0, childCount, c) != childCount) return FAIL;
-            if (str || t != MDB_FORM || childCount != 2 ||
-                c[0] != k || c[1] != v0) return FAIL;
+            check(MDB_GetChildren(v1, 0, childCount, c) == childCount);
+            check(!str && t == MDB_FORM && childCount == 2 &&
+                c[0] == k && c[1] == v0);
             MDB_GetNodeInfo(v2, &t, &childCount, &str);
-            if (MDB_GetChildren(v2, 0, childCount, c) != childCount) return FAIL;
-            if (str || t != MDB_FORM || childCount != 2 ||
-                c[0] != k || c[1] != v1) return FAIL;
+            check(MDB_GetChildren(v2, 0, childCount, c) == childCount);
+            check(!str && t == MDB_FORM && childCount == 2 &&
+                c[0] == k && c[1] == v1);
             MDB_GetNodeInfo(w, &t, &childCount, &str);
-            if (MDB_GetChildren(w, 0, childCount, c) != childCount) return FAIL;
-            if (str || t != MDB_WORLD || childCount != 3 ||
-                c[0] != v0 || c[1] != v1 || c[2] != v2) return FAIL;
-            if (MDB_GetError(&e)) return FAIL;
+            check(MDB_GetChildren(w, 0, childCount, c) == childCount);
+            check(!str && t == MDB_WORLD && childCount == 3 &&
+                c[0] == v0 && c[1] == v1 && c[2] == v2);
+            check(!MDB_GetError(&e));
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
@@ -159,14 +164,14 @@ int Test(int i, int fn, char** const name) {
             MDB_NODE n3 = MDB_SketchNode(sketch, MDB_POCKET);
             MDB_SetSketchRoot(sketch, n3);
             MDB_CommitSketch(sketch);
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_NODETYPE t;
             uintptr_t childCount;
             char* str;
             MDB_GetNodeInfo(n2, &t, &childCount, &str);
-            if (t != MDB_FORM) return FAIL;
+            check(t == MDB_FORM);
             MDB_GetNodeInfo(n3, &t, &childCount, &str);
-            if (t != MDB_POCKET) return FAIL;
+            check(t == MDB_POCKET);
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
@@ -176,7 +181,7 @@ int Test(int i, int fn, char** const name) {
             MDB_CreateGraph();
             MDB_SKETCH sketch = MDB_StartSketch();
             MDB_DiscardSketch(sketch);
-            if (MDB_GetError(&e)) return FAIL;
+            check(!MDB_GetError(&e));
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
@@ -191,6 +196,7 @@ int RunTest(int id) {
     printf("Test %d (%s): ", id, s);
     int result = Test(id,RUN,&s);
     MDB_error e;
+    if (MDB_GetError(&e)) result = FAIL;
     while (MDB_GetError(&e)); // Clear errors
     printf("%s\n", result ? "passed" : "FAILED");
     return result;
@@ -198,7 +204,9 @@ int RunTest(int id) {
 
 int main(int argc, char const* const* argv) {
     int failCount = 0;
+    int testCount = TEST_COUNT;
     if (argc > 1) { // args are a list of test numbers
+        testCount = argc-1;
         for (int i = 1; i < argc; i++) {
             int id;
             sscanf(argv[i], "%d", &id);
@@ -209,8 +217,10 @@ int main(int argc, char const* const* argv) {
             failCount += !RunTest(i);
         }
     }
-    if (failCount == 0)
-        printf("All tests passed");
-    else printf("*** %d/%d TESTS FAILED ***",failCount,TEST_COUNT);
-    printf("\n");
+    if (testCount > 1) { // only print a summary if we ran multiple tests
+        if (failCount == 0)
+            printf("All tests passed");
+        else printf("*** %d/%d TESTS FAILED ***",failCount,testCount);
+        printf("\n");
+    }
 }
