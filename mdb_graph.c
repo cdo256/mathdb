@@ -3,8 +3,13 @@
 #include "mdb_edit_graph.h" //IMPLEMENTS
 #include "mdb_read_graph.h" //IMPLEMENTS
 #include "mdb_error.h"
+#include "mdb_alloc_mem.h"
 #include <stdlib.h>
 #include <string.h>
+
+#define malloc MDB_Alloc
+#define free MDB_Free
+#define realloc MDB_Realloc
 
 #define MDB_SKETCHFLAG 0x0100U
 #define MDB_NODETYPEMASK 0x00FFU
@@ -346,7 +351,8 @@ MDB_NODE MDB_stdcall MDB_CreateConst(char const* name) {
     n->sketch = 0;
     n->index = n->count = n->cap = 0;
     n->n = 0;
-    n->name = strdup(name);
+    n->name = malloc(strlen(name)+1);
+    strcpy(n->name, name);
     if (!n->g->n || !n->name) {
         error(MDB_EMEM);
         free(n->g->n); free(n->name);
