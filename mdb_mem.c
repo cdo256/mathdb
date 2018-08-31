@@ -5,6 +5,11 @@
 
 static UP _allocations = 0;
 
+void* MDB_stdcall MDB_CAlloc(UP count, UP size) {
+    void* block = calloc(count, size);
+    if (block) _allocations++;
+    return block;
+}
 void* MDB_stdcall MDB_Alloc(UP size) {
     void* block = malloc(size);
     if (block) _allocations++;

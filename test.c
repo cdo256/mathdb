@@ -1,3 +1,4 @@
+#include "mdb_global.h"
 #include "mdb_manage.h"
 #include "mdb_edit_graph.h"
 #include "mdb_get_error.h"
@@ -6,8 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <inttypes.h>
 
-#define TEST_COUNT 6
+#define TEST_COUNT 8
 #define PASS 1
 #define FAIL 0
 
@@ -185,6 +187,40 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
+        case 6: { *name = "memory leak 1";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            MDB_CreateConst("+");
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
+        case 7: { *name = "memory leak 2";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            //MDB_SKETCH sketch = MDB_StartSketch();
+            //MDB_NODE w = MDB_SketchNode(sketch, MDB_WORLD);
+            //MDB_SetSketchRoot(sketch, w);
+            //MDB_CommitSketch(sketch);
+            MDB_StartSketch();
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
+        case 8: { *name = "segfault";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            MDB_FreeGraph();
+            MDB_CreateGraph();
+            MDB_SKETCH sketch = MDB_StartSketch();
+            MDB_NODE n1 = MDB_SketchNode(sketch, MDB_WORLD);
+            MDB_SketchNode(sketch, MDB_FORM);
+            MDB_SetSketchRoot(sketch, n1);
+            MDB_DiscardSketchNode(sketch);
+            MDB_NODE n3 = MDB_SketchNode(sketch, MDB_POCKET);
+            MDB_SetSketchRoot(sketch, n3);
+            MDB_CommitSketch(sketch);
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
         default: printf("\nInvalid test id.\n"); return FAIL;
     }
 }
@@ -194,7 +230,10 @@ int RunTest(int id) {
     char* s;
     Test(id,NAME,&s);
     printf("Test %d (%s): ", id, s);
+    UP startAllocCount = MDB_GetAllocatedBlockCount();
     int result = Test(id,RUN,&s);
+    if (startAllocCount != MDB_GetAllocatedBlockCount()) result = FAIL;
+    printf("allocated: %"PRIu64" blocks\n", MDB_GetAllocatedBlockCount());
     MDB_error e;
     if (MDB_GetError(&e)) result = FAIL;
     while (MDB_GetError(&e)); // Clear errors

@@ -7,9 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define calloc MDB_CAlloc
 #define malloc MDB_Alloc
 #define free MDB_Free
 #define realloc MDB_Realloc
+
+void MDB_DebugBreak() {}
+#define debug MDB_DebugBreak
 
 #define MDB_SKETCHFLAG 0x0100U
 #define MDB_NODETYPEMASK 0x00FFU
@@ -102,7 +106,9 @@ void MDB_FreeNode(MDB_NODE node) {
     MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
     if (n->g) {
         n->g->count--;
-        if (n->g->count == 0) free(n->g);
+        if (n->g->count == 0) {
+            free(n->g->n); free(n->g);
+        }
     }
     free(n->n);
     free(n->name);
@@ -167,7 +173,7 @@ MDB_id_table MDB_CreateIdTable(UP slotSize, UP cap) {
 // Only deletes table itself.
 // Deleting entries needs to be done manually before calling this function.
 void MDB_FreeIdTable(MDB_id_table* table) {
-    free(table->a); free(table->freeBmp);
+    /*free(table->a);*/ free(table->freeBmp);
 }
 
 void MDB_stdcall MDB_CreateGraph() {
@@ -201,16 +207,17 @@ void MDB_stdcall MDB_FreeGraph() {
     // Don't abort on error in cleanup function
     MDB_id_table* t = &_nodeTable;
     MDB_PopulateFreeBmp(t);
-    for (UP i = 0; i < t->end; i++) {
-        if (MDB_ReadBit(t->freeBmp, i)) {
+    for (UP i = 1; i < t->end; i++) {
+        if (!MDB_ReadBit(t->freeBmp, i)) {
             MDB_FreeNode(i);
         }
     }
     MDB_FreeIdTable(t);
     t = &_sketchTable;
     MDB_PopulateFreeBmp(t);
-    for (UP i = 0; i < t->end; i++) if (MDB_ReadBit(t->freeBmp, i))
-        free(((MDB_sketch*)MDB_IdTableEntry(t, i))->nodes);
+    for (UP i = 1; i < t->end; i++)
+        if (!MDB_ReadBit(t->freeBmp, i))
+            free(((MDB_sketch*)MDB_IdTableEntry(t, i))->nodes);
     MDB_FreeIdTable(t);
     // We will not forget errors that may have occrred during this graph's lifetime.
     // They must be cleared explicitly with repeated MDB_GetError()'s.
@@ -440,6 +447,7 @@ void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
         if (s->nodes[i])
             MDB_FreeNode(s->nodes[i]);
     }
+    free(s->nodes);
     *(UP*)slot = _sketchTable.freeList;
     _sketchTable.freeList = sketch;
 }
@@ -553,7 +561,7 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
         }
         n->g = a[i].g;
     }
-    free(a); free(stack);
+    free(a); free(stack); free(s->nodes);
     *(UP*)slot = _sketchTable.freeList;
     _sketchTable.freeList = sketch;
     return 1;
