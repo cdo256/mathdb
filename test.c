@@ -9,12 +9,12 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#define TEST_COUNT 10
 #define PASS 1
 #define FAIL 0
 
 #define NAME 0
 #define RUN 1
+#define COUNT 2
 
 #define check assert
 //#define check(x) do if (!(x)) { assert(0); return FAIL; } while(0)
@@ -235,7 +235,10 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
-        default: printf("\nInvalid test id.\n"); return FAIL;
+        default: {
+            if (fn == COUNT) return 10;
+            printf("\nInvalid test id.\n");
+        } return FAIL;
     }
 }
 
@@ -247,7 +250,7 @@ int RunTest(int id) {
     UP startAllocCount = MDB_GetAllocatedBlockCount();
     int result = Test(id,RUN,&s);
     if (startAllocCount != MDB_GetAllocatedBlockCount()) result = FAIL;
-    printf("allocated: %"PRIu64" blocks\n", MDB_GetAllocatedBlockCount());
+    //printf("total allocation: %"PRIu64" blocks\n", MDB_GetAllocatedBlockCount());
     MDB_error e;
     if (MDB_GetError(&e)) result = FAIL;
     while (MDB_GetError(&e)); // Clear errors
@@ -257,7 +260,8 @@ int RunTest(int id) {
 
 int main(int argc, char const* const* argv) {
     int failCount = 0;
-    int testCount = TEST_COUNT;
+    char* s;
+    int testCount = Test(-1,COUNT,&s);
     if (argc > 1) { // args are a list of test numbers
         testCount = argc-1;
         for (int i = 1; i < argc; i++) {
@@ -266,7 +270,7 @@ int main(int argc, char const* const* argv) {
             failCount += !RunTest(id);
         }
     } else { // if no args supplied run all tests
-        for (int i = 0; i < TEST_COUNT; i++) {
+        for (int i = 0; i < testCount; i++) {
             failCount += !RunTest(i);
         }
     }
