@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <inttypes.h>
 
-#define TEST_COUNT 8
+#define TEST_COUNT 10
 #define PASS 1
 #define FAIL 0
 
