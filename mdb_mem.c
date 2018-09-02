@@ -16,6 +16,7 @@ void* MDB_stdcall MDB_Alloc(UP size) {
     return block;
 }
 void* MDB_stdcall MDB_Realloc(void* block, UP size) {
+    assert(size != 0);
     if (!block) _allocations++;
     return realloc(block, size);
 }

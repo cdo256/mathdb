@@ -112,6 +112,7 @@ void MDB_FreeNode(MDB_NODE node) {
     }
     free(n->n);
     free(n->name);
+    n->n = 0;
     free(n);
 }
 
@@ -173,7 +174,7 @@ MDB_id_table MDB_CreateIdTable(UP slotSize, UP cap) {
 // Only deletes table itself.
 // Deleting entries needs to be done manually before calling this function.
 void MDB_FreeIdTable(MDB_id_table* table) {
-    /*free(table->a);*/ free(table->freeBmp);
+    free(table->a); free(table->freeBmp);
 }
 
 void MDB_stdcall MDB_CreateGraph() {
@@ -201,7 +202,7 @@ s32 MDB_ReadBit(u8* bmp, UP idx) {
     return (bmp[idx>>3] >> (idx&7)) & 1;
 }
 void MDB_WriteBit(u8* bmp, UP idx, s32 val) {
-    bmp[idx>>3] = (bmp[idx>>3] & ~(1<<(idx&7))) | val<<(idx&7);
+    bmp[idx>>3] = (bmp[idx>>3] & ~(1<<(idx&7))) | (val<<(idx&7));
 }
 void MDB_stdcall MDB_FreeGraph() {
     // Don't abort on error in cleanup function
@@ -225,6 +226,7 @@ void MDB_stdcall MDB_FreeGraph() {
 }
 
 UP MDB_AllocTableSlot(MDB_id_table* t) {
+    assert(t->cap > 0);
     UP slot = 0;
     if (t->freeList) {
         slot = t->freeList;
@@ -306,7 +308,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
     n->g = 0;
     n->sketch = sketch;
     n->cap = 1; n->count = 0;
-    n->n = calloc(PS,1);
+    n->n = calloc(n->cap,PS);
     n->name = 0;
     if (!n->n) {
         error(MDB_EMEM);
@@ -314,6 +316,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         return 0;
     }
     MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, sketch);
+    assert(s->cap > 0);
     if (s->count == s->cap) {
         UP cap = s->cap * 2;
         if (s->cap > cap) {
@@ -323,7 +326,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         MDB_NODE* nodes = realloc(s->nodes, cap*PS);
         if (!nodes) {
             error(MDB_EMEM);
-            free(n->n); free(n);
+            free(n->n); free(n); n->n = 0;
             return 0;
         }
         s->cap = cap;
@@ -332,7 +335,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
     n->index = s->count;
     MDB_NODE node = MDB_AllocTableSlot(&_nodeTable);
     if (!node) {
-        free(n->n); free(n);
+        free(n->n); free(n); n->n = 0;
         return 0;
     }
     *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node) = n;
@@ -379,7 +382,7 @@ MDB_NODE MDB_stdcall MDB_CreateConst(char const* name) {
 void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     if (_state) return;
     MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, src);
-
+    assert(n->cap > 0);
     MDB_NODETYPE type = n->type & MDB_NODETYPEMASK;
     if (!(n->type & MDB_SKETCHFLAG) && type != MDB_WORLD) {
         error(MDB_EINVARG);
@@ -407,7 +410,7 @@ void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
         if (a) {
             n->n = a;
             n->cap = cap;
-            for (int i = n->cap; i < cap; i++)
+            for (UP i = n->cap; i < cap; i++)
                 n->n[i] = 0;
         } else {
             error(MDB_EMEM);
@@ -516,8 +519,11 @@ s32 MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP*
             a[j].g = g;
             g->n[g->count++] = s->nodes[j];
         } while (j!=i);
-        MDB_NODE* nodes = realloc(g->n, g->count*PS);
-        if (nodes) g->n = nodes;
+        if (g->count == 0) g->n = 0;
+        else {
+            MDB_NODE* nodes = realloc(g->n, g->count*PS);
+            if (nodes) g->n = nodes;
+        }
     }
     return 1;
 }
@@ -556,8 +562,12 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
         n->sketch = 0; n->index = 0;
         n->type &= ~MDB_SKETCHFLAG;
         if (n->type != MDB_WORLD) { // shrink wrap
-            MDB_NODE* a = realloc(n->n, PS*n->count);
-            if (a) { n->n = a; n->cap = n->count; }
+            if (n->count == 0) {
+                free(n->n); n->n = 0; n->cap = 0;
+            } else {
+                MDB_NODE* a = realloc(n->n, PS*n->count);
+                if (a) { n->n = a; n->cap = n->count; }
+            }
         }
         n->g = a[i].g;
     }

@@ -221,6 +221,20 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
+        case 9: { *name = "segfault 2";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            MDB_SKETCH sketch = MDB_StartSketch();
+            MDB_NODE n1 = MDB_SketchNode(sketch, MDB_WORLD);
+            MDB_SketchNode(sketch, MDB_FORM);
+            MDB_SetSketchRoot(sketch, n1);
+            MDB_DiscardSketchNode(sketch);
+            MDB_NODE n3 = MDB_SketchNode(sketch, MDB_POCKET);
+            MDB_SetSketchRoot(sketch, n3);
+            MDB_CommitSketch(sketch);
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
         default: printf("\nInvalid test id.\n"); return FAIL;
     }
 }
