@@ -610,3 +610,9 @@ MDB_GetChildren(MDB_NODE node,
     memcpy(buffer, n->n+startIndex, count*PS);
     return count;
 }
+
+MDB_NODEMAP MDB_stdcall MDB_MatchPattern(
+    MDB_NODE pattern, MDB_NODE target, MDB_NODE capture)
+{
+    return 0;
+}

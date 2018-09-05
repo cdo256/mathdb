@@ -4,6 +4,7 @@
 #include "mdb_get_error.h"
 #include "mdb_read_graph.h"
 #include "mdb_get_mem_info.h"
+#include "mdb_search_graph.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -235,9 +236,22 @@ int Test(int i, int fn, char** const name) {
             MDB_FreeGraph();
             return PASS;
         } return FAIL;
+        case 10: { *name = "const match";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            MDB_NODE a = MDB_CreateConst("a");
+            MDB_NODE b = MDB_CreateConst("b");
+            MDB_NODE c = MDB_CreateConst("c");
+            MDB_NODEMAP map = MDB_MatchPattern(a,b,c);
+            check(!map);
+            map = MDB_MatchPattern(a,a,c);
+            check(map);
+            MDB_FreeGraph();
+            return PASS;
+        } return FAIL;
         default: {
-            if (fn == COUNT) return 10;
-            printf("\nInvalid test id.\n");
+            if (fn == COUNT) return 11;
+            fprintf(stderr, "\nInvalid test id.\n");
         } return FAIL;
     }
 }
