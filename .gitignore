@@ -1,1 +1,5 @@
+/vs
 *.out
+*.exe
+*.obj
+*.o
