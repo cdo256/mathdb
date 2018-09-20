@@ -1,5 +1,12 @@
-/vs
+/vs/mathdb/.vs
 *.out
 *.exe
 *.obj
 *.o
+*.user
+*.enc
+*.ilk
+*.pdb
+*.idb
+*.log
+*.sdf
