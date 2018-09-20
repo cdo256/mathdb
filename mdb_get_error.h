@@ -5,4 +5,4 @@
 // Errors may not be retrieved in the same order they occurred.
 // Multiple errors will be returned as a single error.
 // You shouldn't free error->str
-int32_t MDB_stdcall MDB_GetError(MDB_error* error);
+int32_t MDB_stdcall MDB_GetError(MDB_error* error, int32_t clear);

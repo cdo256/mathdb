@@ -6,14 +6,17 @@
 #include "mdb_alloc_mem.h"
 #include <stdlib.h>
 #include <string.h>
+#ifndef _NDEBUG
+#include <stdio.h>
+#endif
 
 #define calloc MDB_CAlloc
 #define malloc MDB_Alloc
 #define free MDB_Free
 #define realloc MDB_Realloc
 
-void MDB_DebugBreak() {}
-#define debug MDB_DebugBreak
+static void mdb_DebugBreak(void) {}
+#define debug mdb_DebugBreak
 
 #define MDB_SKETCHFLAG 0x0100U
 #define MDB_NODETYPEMASK 0x00FFU
@@ -23,43 +26,48 @@ void MDB_DebugBreak() {}
 static u32 _errorFlags = 0;
 static u32 _state = MDB_EUNINIT;
 
-typedef struct MDB_sketch {
+typedef struct mdb_sketch {
     UP count, cap, index;
     MDB_NODE* nodes;
-} MDB_sketch;
+} mdb_sketch;
 
 // strongly-connected component
-typedef struct MDB_scc {
+typedef struct mdb_scc {
     UP count;       // count of n
     MDB_NODE* n;    // array of nodes in the scc
-} MDB_scc;
+} mdb_scc;
 
-typedef struct MDB_node {
+typedef struct mdb_node {
     MDB_NODETYPE type;
-    MDB_scc* g;         // a pointer to the scc when we're no longer a sketch
+    mdb_scc* g;         // a pointer to the scc when we're no longer a sketch
     MDB_SKETCH sketch;  // which sketch are we
     UP index;           // what index are we in this sketch?
     UP count, cap;      // number of children and size of n respectively
     MDB_NODE* n;        // array of children
     c8* name;           // our name if we're a const
-} MDB_node;
+} mdb_node;
 
-typedef struct MDB_id_table {
+typedef struct mdb_node_map {
+    UP size, count;
+    MDB_NODE* a;
+} mdb_node_map;
+
+typedef struct mdb_id_table {
     UP end, cap; // a[0..end) is the part we've touched, |a| = cap
     UP sz;       // size of each entry
     UP freeList; // index of next free slot; end: 0, adv: freeList = *(UP*)&a[freeList*sz]
-    u8* a;       // array of size cap; each entry either freeList index, MDB_node* or MDB_sketch*
+    u8* a;       // array of size cap; each entry either freeList index, mdb_node* or mdb_sketch*
     u8* freeBmp; // reserve but don't use until deinit time
-} MDB_id_table;
+} mdb_id_table;
 
-void* MDB_IdTableEntry(MDB_id_table const* t, UP idx) {
+static void* MDB_IdTableEntry(mdb_id_table const* t, UP idx) {
     return (void*)&t->a[idx*t->sz];
 }
 
-static MDB_id_table _nodeTable;
-static MDB_id_table _sketchTable;
+static mdb_id_table mdb_nodeTable;
+static mdb_id_table mdb_sketchTable;
 
-static c8 const* const _errorStr[] = {
+static c8 const* const mdb_errorStr[] = {
     [0]="no error",
     [MDB_EMEMBIT]="out of memory",
     [MDB_EUNINITBIT]="the graph has not been created",
@@ -69,41 +77,46 @@ static c8 const* const _errorStr[] = {
     [MDB_EINTOVERFLOWBIT]="an integer overflow has occurred. Consider running as 64bit",
 };
 
-s32 MDB_stdcall MDB_GetError(MDB_error* e) {
+s32 MDB_stdcall MDB_GetError(MDB_error* e, s32 clear) {
     if (!_errorFlags) {
-        e->str = _errorStr[0];
+        e->str = mdb_errorStr[0];
         e->id = MDB_ENONE;
         _state &= MDB_EUNINIT; // clear all but the uninit bit.
         return 0;
     }
     for (int i = 0; i < 32; i++) {
         if ((1U<<i)&_errorFlags) {
-            e->str = _errorStr[i];
+            e->str = mdb_errorStr[i];
             e->id = (1U<<i);
-            _errorFlags &= ~e->id;
+            if (clear) _errorFlags &= ~e->id;
             return 1;
         }
     }
     return 0;
 }
 
-void MDB_SignalError(UP type) {
+void mdb_SignalError(UP type) {
     _errorFlags |= type;
     _state |= _errorFlags;
+#ifndef _NDEBUG
+    MDB_error e;
+    MDB_GetError(&e, 0);
+    fprintf(stderr, "%s\n", e.str);
     fail();
+#endif
 }
-#define error(t) MDB_SignalError(t)
+#define error(t) mdb_SignalError(t)
 
-static inline UP MDB_Min(UP x, UP y) {
+static inline UP mdb_Min(UP x, UP y) {
     return x > y ? y : x;
 }
-static inline UP MDB_Max(UP x, UP y) {
+static inline UP mdb_Max(UP x, UP y) {
     return x < y ? y : x;
 }
 
-// Frees scc but doesn't update _nodeTable or
+// Frees scc but doesn't update mdb_nodeTable or
 void MDB_FreeNode(MDB_NODE node) {
-    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node);
     if (n->g) {
         n->g->count--;
         if (n->g->count == 0) {
@@ -116,7 +129,7 @@ void MDB_FreeNode(MDB_NODE node) {
     free(n);
 }
 
-UP MDB_RoundUp(UP x) {
+static UP mdb_RoundUp(UP x) {
     x--;
     x |= x >> 1;
     x |= x >> 2;
@@ -130,8 +143,8 @@ UP MDB_RoundUp(UP x) {
 }
 
 // only works for Po2 x
-s32 MDB_IntLogPo2(UP x) {
-    assert(x != 0 && x == MDB_RoundUp(x));
+static s32 mdb_IntLogPo2(UP x) {
+    assert(x != 0 && x == mdb_RoundUp(x));
 
 // Duplicates to upper DWORD when using 64bit pointers
 #if PS == 8
@@ -152,10 +165,10 @@ s32 MDB_IntLogPo2(UP x) {
 #undef REP32
 }
 // succeeded iff result.a != 0
-MDB_id_table MDB_CreateIdTable(UP slotSize, UP cap) {
+static mdb_id_table mdb_CreateIdTable(UP slotSize, UP cap) {
     assert(cap >= 1);
-    MDB_id_table t;
-    t.sz = MDB_RoundUp(slotSize);
+    mdb_id_table t;
+    t.sz = mdb_RoundUp(slotSize);
     assert(t.sz >= PS);
     t.cap = cap;
     t.end = 1;
@@ -173,59 +186,59 @@ MDB_id_table MDB_CreateIdTable(UP slotSize, UP cap) {
 
 // Only deletes table itself.
 // Deleting entries needs to be done manually before calling this function.
-void MDB_FreeIdTable(MDB_id_table* table) {
+static void mdb_FreeIdTable(mdb_id_table* table) {
     free(table->a); free(table->freeBmp);
 }
 
-void MDB_stdcall MDB_CreateGraph() {
+void MDB_stdcall MDB_CreateGraph(void) {
     if (!(_state & MDB_EUNINIT)) {
         error(MDB_EINVCALL);
         return;
     }
-    _nodeTable = MDB_CreateIdTable(PS,65536);
-    _sketchTable = MDB_CreateIdTable(sizeof(MDB_sketch),256);
-    if (!_nodeTable.a || !_sketchTable.a) {
+    mdb_nodeTable = mdb_CreateIdTable(PS,65536);
+    mdb_sketchTable = mdb_CreateIdTable(sizeof(mdb_sketch),256);
+    if (!mdb_nodeTable.a || !mdb_sketchTable.a) {
         error(MDB_EUNINIT);
-        MDB_FreeIdTable(&_nodeTable);
-        MDB_FreeIdTable(&_sketchTable);
+        mdb_FreeIdTable(&mdb_nodeTable);
+        mdb_FreeIdTable(&mdb_sketchTable);
         return;
     }
     _state &= ~MDB_EUNINIT;
 }
-void MDB_PopulateFreeBmp(MDB_id_table* t) {
+static void mdb_PopulateFreeBmp(mdb_id_table* t) {
     memset(t->freeBmp, 0, (t->end+7)>>3);
     for (UP p = t->freeList; p; p = (UP)t->a[p*t->sz]) {
         t->freeBmp[p>>3] |= 1 << (p & 7);
     }
 }
-s32 MDB_ReadBit(u8* bmp, UP idx) {
+static s32 mdb_ReadBit(u8* bmp, UP idx) {
     return (bmp[idx>>3] >> (idx&7)) & 1;
 }
-void MDB_WriteBit(u8* bmp, UP idx, s32 val) {
-    bmp[idx>>3] = (bmp[idx>>3] & ~(1<<(idx&7))) | (val<<(idx&7));
+static void mdb_WriteBit(u8* bmp, UP idx, s32 val) {
+    bmp[idx>>3] = (u8)((bmp[idx>>3] & ~(1<<(idx&7))) | (val<<(idx&7)));
 }
-void MDB_stdcall MDB_FreeGraph() {
+void MDB_stdcall MDB_FreeGraph(void) {
     // Don't abort on error in cleanup function
-    MDB_id_table* t = &_nodeTable;
-    MDB_PopulateFreeBmp(t);
+    mdb_id_table* t = &mdb_nodeTable;
+    mdb_PopulateFreeBmp(t);
     for (UP i = 1; i < t->end; i++) {
-        if (!MDB_ReadBit(t->freeBmp, i)) {
+        if (!mdb_ReadBit(t->freeBmp, i)) {
             MDB_FreeNode(i);
         }
     }
-    MDB_FreeIdTable(t);
-    t = &_sketchTable;
-    MDB_PopulateFreeBmp(t);
+    mdb_FreeIdTable(t);
+    t = &mdb_sketchTable;
+    mdb_PopulateFreeBmp(t);
     for (UP i = 1; i < t->end; i++)
-        if (!MDB_ReadBit(t->freeBmp, i))
-            free(((MDB_sketch*)MDB_IdTableEntry(t, i))->nodes);
-    MDB_FreeIdTable(t);
+        if (!mdb_ReadBit(t->freeBmp, i))
+            free(((mdb_sketch*)MDB_IdTableEntry(t, i))->nodes);
+    mdb_FreeIdTable(t);
     // We will not forget errors that may have occrred during this graph's lifetime.
     // They must be cleared explicitly with repeated MDB_GetError()'s.
     _state |= MDB_EUNINIT;
 }
 
-UP MDB_AllocTableSlot(MDB_id_table* t) {
+static UP mdb_AllocTableSlot(mdb_id_table* t) {
     assert(t->cap > 0);
     UP slot = 0;
     if (t->freeList) {
@@ -255,42 +268,42 @@ UP MDB_AllocTableSlot(MDB_id_table* t) {
     return slot;
 }
 
-MDB_SKETCH MDB_stdcall MDB_StartSketch() {
+MDB_SKETCH MDB_stdcall MDB_StartSketch(void) {
     if (_state) return 0;
-    MDB_SKETCH sketch = MDB_AllocTableSlot(&_sketchTable);
+    MDB_SKETCH sketch = mdb_AllocTableSlot(&mdb_sketchTable);
     if (!sketch) return 0; // error already signal, we have nothing to add
-    MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, sketch);
+    mdb_sketch* s = MDB_IdTableEntry(&mdb_sketchTable, sketch);
     s->index = sketch;
     s->count = 1; // start at one because the first slot is for the root
     s->cap = 256;
     s->nodes = calloc(s->cap, PS); // need zero-ing
     if (!s->nodes) {
         error(MDB_EMEM);
-        *(UP*)s = _sketchTable.freeList;
-        _sketchTable.freeList = sketch;
+        *(UP*)s = mdb_sketchTable.freeList;
+        mdb_sketchTable.freeList = sketch;
         return 0;
     } else return sketch;
 }
-void MDB_MoveSketchNode(MDB_sketch* s, MDB_NODE node, UP idx) {
+static void mdb_MoveSketchNode(mdb_sketch* s, MDB_NODE node, UP idx) {
     s->nodes[idx] = node;
-    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node);
     n->index = idx;
 }
 void MDB_stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
     if (_state) return;
-    MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, sketch);
+    mdb_sketch* s = MDB_IdTableEntry(&mdb_sketchTable, sketch);
     assert(s->index == sketch);
     if (s->nodes[0] != 0) {
         error(MDB_EINVCALL);
         return;
     }
-    UP oldIndex = (*(MDB_node**)MDB_IdTableEntry(&_nodeTable, node))->index;
-    MDB_MoveSketchNode(s, node, 0);
+    UP oldIndex = (*(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node))->index;
+    mdb_MoveSketchNode(s, node, 0);
     if (s->count <= 1) {
         error(MDB_EINVCALL);
         return;
     }
-    MDB_MoveSketchNode(s, s->nodes[--s->count], oldIndex);
+    mdb_MoveSketchNode(s, s->nodes[--s->count], oldIndex);
 }
 
 MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
@@ -299,7 +312,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         error(MDB_EINVARG);
         return 0;
     }
-    MDB_node* n = malloc(sizeof(MDB_node));
+    mdb_node* n = malloc(sizeof(mdb_node));
     if (!n) {
         error(MDB_EMEM);
         return 0;
@@ -315,7 +328,7 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         free(n);
         return 0;
     }
-    MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, sketch);
+    mdb_sketch* s = MDB_IdTableEntry(&mdb_sketchTable, sketch);
     assert(s->cap > 0);
     if (s->count == s->cap) {
         UP cap = s->cap * 2;
@@ -333,24 +346,24 @@ MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
         s->nodes = nodes;
     }
     n->index = s->count;
-    MDB_NODE node = MDB_AllocTableSlot(&_nodeTable);
+    MDB_NODE node = mdb_AllocTableSlot(&mdb_nodeTable);
     if (!node) {
         free(n->n); free(n); n->n = 0;
         return 0;
     }
-    *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node) = n;
+    *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node) = n;
     s->nodes[s->count++] = node;
     return node;
 }
 MDB_NODE MDB_stdcall MDB_CreateConst(char const* name) {
     if (_state) return 0;
-    MDB_node* n = malloc(sizeof(MDB_node));
+    mdb_node* n = malloc(sizeof(mdb_node));
     if (!n) {
         error(MDB_EMEM);
         return 0;
     }
     n->type = MDB_CONST;
-    n->g = malloc(sizeof(MDB_scc));
+    n->g = malloc(sizeof(mdb_scc));
     if (!n->g) {
         error(MDB_EMEM);
         free(n);
@@ -361,27 +374,28 @@ MDB_NODE MDB_stdcall MDB_CreateConst(char const* name) {
     n->sketch = 0;
     n->index = n->count = n->cap = 0;
     n->n = 0;
-    n->name = malloc(strlen(name)+1);
-    strcpy(n->name, name);
+    UP len = strlen(name)+1;
+    n->name = malloc(len);
+    memcpy(n->name, name, len);
     if (!n->g->n || !n->name) {
         error(MDB_EMEM);
         free(n->g->n); free(n->name);
         free(n->g); free(n);
         return 0;
     }
-    MDB_NODE node = MDB_AllocTableSlot(&_nodeTable);
+    MDB_NODE node = mdb_AllocTableSlot(&mdb_nodeTable);
     if (!node) {
         free(n->g->n); free(n->name);
         free(n->g); free(n);
         return 0;
     }
     n->g->n[0] = node;
-    *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node) = n;
+    *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node) = n;
     return node;
 }
 void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     if (_state) return;
-    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, src);
+    mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, src);
     assert(n->cap > 0);
     MDB_NODETYPE type = n->type & MDB_NODETYPEMASK;
     if (!(n->type & MDB_SKETCHFLAG) && type != MDB_WORLD) {
@@ -405,13 +419,13 @@ void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
         return;
     }
     if (idx >= n->cap) {
-        UP cap = MDB_RoundUp(idx);
+        UP cap = mdb_RoundUp(idx+1);
         MDB_NODE* a = realloc(n->n, cap*PS);
         if (a) {
             n->n = a;
+			for (UP i = n->cap; i < cap; i++)
+				n->n[i] = 0;
             n->cap = cap;
-            for (UP i = n->cap; i < cap; i++)
-                n->n[i] = 0;
         } else {
             error(MDB_EMEM);
             return;
@@ -427,64 +441,64 @@ void MDB_stdcall MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
 
 void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
     // Don't abort on error in cleanup function
-    void* slot = MDB_IdTableEntry(&_nodeTable, node);
-    MDB_node* n = *(MDB_node**)slot;
-    MDB_sketch* s = MDB_IdTableEntry(&_sketchTable, n->sketch);
+    void* slot = MDB_IdTableEntry(&mdb_nodeTable, node);
+    mdb_node* n = *(mdb_node**)slot;
+    mdb_sketch* s = MDB_IdTableEntry(&mdb_sketchTable, n->sketch);
     assert(s->nodes[n->index] == node);
     if (n->index == 0) s->nodes[0] = 0; // don't decrement count if n is the root node
     else {
         s->nodes[n->index] = s->nodes[--s->count];
         assert(s->nodes[n->index]);
-        (*(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[n->index]))->index = n->index;
+        (*(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, s->nodes[n->index]))->index = n->index;
         s->nodes[s->count] = 0;
     }
     MDB_FreeNode(node);
-    *(UP*)slot = _nodeTable.freeList;
-    _nodeTable.freeList = node;
+    *(UP*)slot = mdb_nodeTable.freeList;
+    mdb_nodeTable.freeList = node;
 }
 void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
     // Don't abort on error in cleanup function
-    void* slot = MDB_IdTableEntry(&_sketchTable, sketch);
-    MDB_sketch* s = (MDB_sketch*)slot;
+    void* slot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
+    mdb_sketch* s = (mdb_sketch*)slot;
     for (UP i = 0; i < s->cap; i++) {
         if (s->nodes[i])
             MDB_FreeNode(s->nodes[i]);
     }
     free(s->nodes);
-    *(UP*)slot = _sketchTable.freeList;
-    _sketchTable.freeList = sketch;
+    *(UP*)slot = mdb_sketchTable.freeList;
+    mdb_sketchTable.freeList = sketch;
 }
 
-typedef struct MDB_scc_sketch_node_info {
+typedef struct mdb_scc_sketch_node_info {
     s32 onStack;
     UP sccIndex;
     UP lowLink;
-    MDB_scc* g;
-} MDB_scc_sketch_node_info;
+    mdb_scc* g;
+} mdb_scc_sketch_node_info;
 
-s32 MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP* stack, UP* sp) {
-    MDB_node* v = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
+static s32 mdb_SCCStep(UP i, mdb_sketch* s, mdb_scc_sketch_node_info* a, UP* index, UP* stack, UP* sp) {
+    mdb_node* v = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, s->nodes[i]);
     a[i].sccIndex = a[i].lowLink = *index;
     a[i].onStack = 1; a[i].g = 0;
     *index += 1;
     stack[(*sp)++] = i;
     // For each child
     for (MDB_NODE* child = v->n; child < v->n + v->count; child++) {
-        MDB_node* w = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, *child);
+        mdb_node* w = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, *child);
         if (w->sketch && w->sketch != s->index) { // can't link to different uncommitted sketch
             error(MDB_EINVCALL);
             return 0;
         }
         if (a[w->index].sccIndex == 0) {
-            if (!MDB_SCCStep(w->index, s, a, index, stack, sp)) return 0;
-            a[i].lowLink = MDB_Min(a[i].lowLink, a[w->index].lowLink);
+            if (!mdb_SCCStep(w->index, s, a, index, stack, sp)) return 0;
+            a[i].lowLink = mdb_Min(a[i].lowLink, a[w->index].lowLink);
         } else if (a[w->index].onStack) {
-            a[i].lowLink = MDB_Min(a[i].lowLink, a[w->index].sccIndex);
+            a[i].lowLink = mdb_Min(a[i].lowLink, a[w->index].sccIndex);
         }
     }
     // are we a root node?
     if (a[i].lowLink == a[i].sccIndex) {
-        MDB_scc* g = malloc(sizeof(MDB_scc));
+        mdb_scc* g = malloc(sizeof(mdb_scc));
         if (!g) {
             error(MDB_EMEM);
             return 0;
@@ -531,8 +545,8 @@ s32 MDB_SCCStep(UP i, MDB_sketch* s, MDB_scc_sketch_node_info* a, UP* index, UP*
 // returns 0 iff failed to commit
 s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
     if (_state) return 0;
-    void* slot = MDB_IdTableEntry(&_sketchTable, sketch);
-    MDB_sketch* s = (MDB_sketch*)slot;
+    void* slot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
+    mdb_sketch* s = (mdb_sketch*)slot;
     for (UP i = 0; i < s->count; i++) {
         MDB_NODE n = s->nodes[i];
         if (!n) {
@@ -541,8 +555,8 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
         }
     }
     // Tarjan's SCC algorithm
-    MDB_scc_sketch_node_info* a =
-        calloc(s->count+1,sizeof(MDB_scc_sketch_node_info));
+    mdb_scc_sketch_node_info* a =
+        calloc(s->count+1,sizeof(mdb_scc_sketch_node_info));
     UP* stack = malloc(s->count*PS);
     if (!a || !stack) {
         error(MDB_EMEM);
@@ -552,28 +566,28 @@ s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
     UP index = 1;
     UP sp = 0;
     for (UP i = 0; i < s->count; i++) if (!a[i].sccIndex)
-        if (!MDB_SCCStep(i, s, a, &index, stack, &sp)) {
+        if (!mdb_SCCStep(i, s, a, &index, stack, &sp)) {
             free(a); free(stack);
             return 0;
         }
     for (UP i = 0; i < s->count; i++) {
         assert(a[i].g);
-        MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, s->nodes[i]);
+        mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, s->nodes[i]);
         n->sketch = 0; n->index = 0;
         n->type &= ~MDB_SKETCHFLAG;
         if (n->type != MDB_WORLD) { // shrink wrap
             if (n->count == 0) {
                 free(n->n); n->n = 0; n->cap = 0;
             } else {
-                MDB_NODE* a = realloc(n->n, PS*n->count);
-                if (a) { n->n = a; n->cap = n->count; }
+                MDB_NODE* ar = realloc(n->n, PS*n->count);
+                if (ar) { n->n = ar; n->cap = n->count; }
             }
         }
         n->g = a[i].g;
     }
     free(a); free(stack); free(s->nodes);
-    *(UP*)slot = _sketchTable.freeList;
-    _sketchTable.freeList = sketch;
+    *(UP*)slot = mdb_sketchTable.freeList;
+    mdb_sketchTable.freeList = sketch;
     return 1;
 }
 
@@ -588,7 +602,7 @@ MDB_GetNodeInfo(MDB_NODE node,
         *str = 0;
         return;
     }
-    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node);
     *type = n->type;
     *childCount = n->count;
     *str = (char*)n->name;
@@ -601,18 +615,85 @@ MDB_GetChildren(MDB_NODE node,
 
     if (_state) return 0;
 
-    MDB_node* n = *(MDB_node**)MDB_IdTableEntry(&_nodeTable, node);
+    mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node);
     if (n->count <= startIndex) {
         error(MDB_EINVARG);
         return 0;
     }
-    UP count = MDB_Min(n->count - startIndex, bufferCount);
+    UP count = mdb_Min(n->count - startIndex, bufferCount);
     memcpy(buffer, n->n+startIndex, count*PS);
     return count;
 }
 
+
+
+static mdb_node_map* mdb_CreateNodeMap(UP size) {
+	mdb_node_map* m = malloc(sizeof(mdb_node_map));
+	m->count = 0; m->size = size;
+	m->a = calloc(m->size*2,PS);
+	return m;
+}
+void MDB_stdcall MDB_FreeNodeMap(MDB_NODEMAP map) {
+	mdb_node_map* m = (mdb_node_map*)map;
+	free(m->a);
+	free(m);
+}
+
+static MDB_NODE* mdb_LookupNode(MDB_NODEMAP map, MDB_NODE n) {
+	UP h = 0;mdb_node_map* m = (mdb_node_map*)map;
+	for (int i =0;i<PS;i++) h=h*65599+((n>>(i*8))&255);
+	h%=m->size;
+	while (m->a[h*2]&&m->a[h*2]!=n) h = (h+1)%m->size;
+	return &m->a[h*2];
+}
+
+// returns 1 if the map grew successfully, 2 if no map grow was required and 0 on failure to grow
+// map is left in-tact on failure.
+static int mdb_GrowNodeMap(mdb_node_map* m, UP c) {
+	m->count+=c;
+	if (m->count*3 >= 2*m->size) {
+		mdb_node_map nm = *m;
+		nm.size*=2;
+		nm.a = realloc(nm.a,nm.size*PS);
+		if (!nm.a) {error(MDB_EMEM);return 0;}
+		memset(nm.a,0,nm.size*PS);
+		for (UP i = 0; i < m->size*2; i+=2) {
+			if (m->a[i]) memcpy(mdb_LookupNode((MDB_NODEMAP)&nm, m->a[i]), &m->a[i], 2*PS);
+		}
+		return 1;
+	}
+	return 2;
+}
+uintptr_t MDB_stdcall MDB_MapElemCount(MDB_NODEMAP map) {return ((mdb_node_map*)map)->size;}
+MDB_NODE MDB_stdcall MDB_LookupNode(MDB_NODEMAP map, MDB_NODE src) {
+	return mdb_LookupNode(map, src)[1];
+}
+
+static s32 mdb_MatchPatternR(MDB_NODE pattern, MDB_NODE target, MDB_NODE capture, MDB_NODEMAP m) {
+	mdb_node* p = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, pattern);
+	mdb_node* t = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, target);
+	if (target != pattern) {
+		if (p->type == MDB_FORM && p->count >= 2 && p->n[1] == capture) {
+			memcpy_s(mdb_LookupNode(m, pattern), 2*PS, (MDB_NODE[]){pattern, target}, 2*PS);
+			return 1;
+		}
+		if (p->count != t->count || p->type != t->type) return 0;
+		if (p->type == MDB_CONST) return 0; // already know that they're not equal.
+		for (UP i = 0; i < t->count; i++) {
+			if (!mdb_MatchPatternR(p->n[i], t->n[i], capture, m)) return 0;
+		}
+		return 1;
+	} else {
+		memcpy_s(mdb_LookupNode(m, pattern), 2*PS, (MDB_NODE[]){pattern, target}, 2*PS);
+		return 1;
+	}
+}
+
 MDB_NODEMAP MDB_stdcall MDB_MatchPattern(
-    MDB_NODE pattern, MDB_NODE target, MDB_NODE capture)
-{
-    return 0;
+    MDB_NODE pattern, MDB_NODE target, MDB_NODE capture) {
+	MDB_NODEMAP m = (MDB_NODEMAP)mdb_CreateNodeMap(20);
+	if (!mdb_MatchPatternR(pattern, target, capture, m)) {
+		MDB_FreeNodeMap(m); m = 0;
+	}
+	return m;
 }

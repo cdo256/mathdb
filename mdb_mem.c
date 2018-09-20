@@ -22,9 +22,9 @@ void* MDB_stdcall MDB_Realloc(void* block, UP size) {
 }
 void MDB_stdcall MDB_Free(void* block) {
     if (block) _allocations--;
-    return free(block);
+    free(block);
 }
 
-UP MDB_stdcall MDB_GetAllocatedBlockCount() {
+UP MDB_stdcall MDB_GetAllocatedBlockCount(void) {
     return _allocations;
 }

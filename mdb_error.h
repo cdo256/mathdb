@@ -1,9 +1,14 @@
 #include "mdb_base.h"
 
+#pragma warning(push)
+#ifdef _MSC_VER
+#pragma warning(disable:4820) // Ignore padding added to the struct
+#endif
 typedef struct MDB_error {
     unsigned id;
     char const* str;
 } MDB_error;
+#pragma warning(pop)
 
 #define MDB_EMEMBIT             0x0001U
 #define MDB_EINVCALLBIT         0x0003U

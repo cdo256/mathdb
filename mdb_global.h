@@ -2,6 +2,7 @@
 // Don't include from external interfaces, use mdb_base.h instead.
 #include <stddef.h>
 #include <stdint.h>
+#include <limits.h>
 #include <assert.h>
 #define fail() assert(0)
 
@@ -26,9 +27,14 @@ typedef uintptr_t UP; // Used basically everywhere
 #else
 #error UNSUPPORTED "data pointer must be either 32bits or 64bits"
 #endif
-static_assert(PS <= sizeof(unsigned long),
-    UNSUPPORTED "unsigned long should be able to contain a pointer");
+
 static_assert(PS == sizeof(void*), UNSUPPORTED "unexpected data pointer size");
 static_assert(PS == sizeof(char*) && PS == sizeof(long long*),
     UNSUPPORTED "inconsistent data pointer sizes");
-static_assert(NULL == 0, UNSUPPORTED "non-zero null");
+static_assert((uintptr_t)NULL == 0, UNSUPPORTED "non-zero null");
+
+#ifdef _MSC_VER
+#pragma warning(disable:4820) // Ignore struct size since I want it to work on both 64-bit and 32-bit arch
+#pragma warning(disable:4710) // Ignore 'funciton not inlined' since it's triggered by the likes of printf
+#pragma warning(disable:4204) // Non-constant initializer is now in C99
+#endif
