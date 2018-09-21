@@ -117,7 +117,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\..\mdb_graph.c" />
     <ClCompile Include="..\..\..\mdb_mem.c" />
-    <ClCompile Include="..\..\..\test.c" />
+    <ClCompile Include="..\..\..\unittest.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
