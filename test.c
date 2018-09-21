@@ -128,8 +128,11 @@ ND A1(SK s, ND o, ND a0) {
 #define root MDB_SetSketchRoot
 #define commit MDB_CommitSketch
 #define mfree MDB_FreeNodeMap
+#define node MDB_SketchNode
+#define link MDB_AddLink
+#define lookup MDB_LookupNode
 
-int Test(int i, int fn, char** const name) {
+int Test(int i, int fn, char const** name) {
     switch (i) {
         case 0: { *name = "create free";
             if (fn == NAME) return -1;
@@ -383,8 +386,44 @@ int Test(int i, int fn, char** const name) {
             gfree();
             return PASS;
         }
-        default: {
-            if (fn == COUNT) return 12;
+		case 12: {*name = "simple pattern search";
+			if (fn == NAME) return -1;
+			graph();
+			SK s = sketch();
+			ND var = con("var");
+			ND a = con("a");
+			ND plus = con("+");
+			ND one = con("1");
+			ND two = con("2");
+			ND c = con("c");
+			ND va = A2(s,var,c,a);
+			ND opo = A2(s,plus,one,one);
+			ND opt = A2(s,plus,one,two);
+			ND tpo = A2(s,plus,two,one);
+			ND tpt = A2(s,plus,two,two);
+			ND world = node(s, MDB_WORLD);
+			link(world,MDB_ELEM,opo);
+			link(world,MDB_ELEM,opt);
+			link(world,MDB_ELEM,tpo);
+			link(world,MDB_ELEM,tpt);
+			root(s,world);
+			ND apt = A2(s,plus,va,two);
+			commit(s);
+			ND w = MDB_MatchAllNodes(apt,world,c);
+			check(w);
+			MDB_NODETYPE t; UP cc; char* str;
+			MDB_GetNodeInfo(w, &t, &cc, &str);
+			check(cc == 2 && !str);
+			check(t == MDB_POCKET || t == MDB_WORLD);//TODO: which one is correct (or should we allow both)?
+			ND children[2];
+			check(MDB_GetChildren(w, 0, 2, children) == 2);
+			check((children[0]==opt && children[1]==tpt) ||
+				(children[1]==opt && children[0]==tpt));
+			gfree();
+			return PASS;
+		}
+		default: {
+            if (fn == COUNT) return 13;
             fprintf(stderr, "\nInvalid test id.\n");
         } return FAIL;
     }
