@@ -445,6 +445,7 @@ int RunTest(int id) {
     return result;
 }
 
+#if 0
 int main(int argc, char const* const* argv) {
     int failCount = 0;
     char* s;
@@ -471,3 +472,4 @@ int main(int argc, char const* const* argv) {
 	system("pause");
 #endif
 }
+#endif

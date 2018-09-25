@@ -102,6 +102,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\mdb_alloc_mem.h" />
+    <ClInclude Include="..\..\..\mdb_all_generic_map.h" />
     <ClInclude Include="..\..\..\mdb_base.h" />
     <ClInclude Include="..\..\..\mdb_edit_graph.h" />
     <ClInclude Include="..\..\..\mdb_error.h" />
@@ -115,6 +116,8 @@
     <ClInclude Include="..\..\..\mdb_search_graph.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\fuzztest.c" />
+    <ClCompile Include="..\..\..\mdb_generic_map.c" />
     <ClCompile Include="..\..\..\mdb_graph.c" />
     <ClCompile Include="..\..\..\mdb_mem.c" />
     <ClCompile Include="..\..\..\unittest.c" />
