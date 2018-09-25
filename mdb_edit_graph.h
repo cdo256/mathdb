@@ -9,6 +9,8 @@ MDB_NODE MDB_stdcall
 MDB_CreateConst(const char* name);
 void MDB_stdcall
 MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node);
+//TODO: this may fail unexpectedly (eg. if it creates cycles)
+// the method should check and return a bool/reason-code
 void MDB_stdcall
 MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst);
 void MDB_stdcall
@@ -17,7 +19,5 @@ void MDB_stdcall
 MDB_DiscardSketch(MDB_SKETCH sketch);
 void MDB_stdcall
 MDB_DiscardLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst);
-void MDB_stdcall
-MDB_DiscardSketch(MDB_SKETCH sketch);
 int32_t MDB_stdcall
 MDB_CommitSketch(MDB_SKETCH sketch);
