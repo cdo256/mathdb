@@ -85,10 +85,10 @@ void UniformRandomFuzz(void) {
 			case 0: MDB_FreeGraph();
 				memset(n.a,0,n.s*PS);n.c=0;
 				memset(s.a,0,s.s*PS);s.c=0;
-				for (int i = 0; i < nm->s; i+=2) {
+				for (UP i = 0; i < nm->s; i+=2) {
 					if (nm->a[i]) free((void*)nm->a[i+1]);
 				}
-				for (int i = 0; i < sm->s; i+=2) {
+				for (UP i = 0; i < sm->s; i+=2) {
 					if (sm->a[i]) free((void*)sm->a[i+1]);
 				}
 				sNonEmpty=nUnreferenced = 0;
@@ -151,8 +151,6 @@ void UniformRandomFuzz(void) {
 			case 5: if (n.c>0) {
 				MDB_NODE src,dst=PickUniform(&n,0);
 				node_info* ni;
-				MDB_NODE nd;
-				UP* k;
 				//check there is a node
 				for (UP i = 0; i < n.s; i++) {
 					if (!n.a[i]) continue;
@@ -246,7 +244,7 @@ l8:
 				UP* k = MDB_GLookup(sm, sk);
 				for (UP i = 0; i < n.s; i++) {
 					((node_info*)MDB_GLookup(nm, n.a[i])[1])->sketch = 0;
-				}free(k[1]);
+				}free((void*)k[1]);
 				k[0] = 0; k[1] = ~0ULL;sm->d++;
 				MDB_CommitSketch(sk);
 			}

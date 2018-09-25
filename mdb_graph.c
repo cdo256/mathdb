@@ -476,7 +476,7 @@ void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
 	log("done\n");
 }
 void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
-	log("MDB_DiscardSketch(sketch: %x): ");
+	log("MDB_DiscardSketch(sketch: %x): ", sketch);
     // Don't abort on error in cleanup function
     void* slot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
     mdb_sketch* s = (mdb_sketch*)slot;
@@ -565,7 +565,7 @@ static s32 mdb_SCCStep(UP i, mdb_sketch* s, mdb_scc_sketch_node_info* a, UP* ind
 
 // returns 0 iff failed to commit
 s32 MDB_stdcall MDB_CommitSketch(MDB_SKETCH sketch) {
-	log("MDB_CommitSketch(sketch: %x): ");
+	log("MDB_CommitSketch(sketch: %x): ", sketch);
     if (mdb_state) return 0;
     void* slot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
     mdb_sketch* s = (mdb_sketch*)slot;
