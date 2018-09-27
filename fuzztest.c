@@ -83,6 +83,7 @@ void UniformRandomFuzz(void) {
 		if (!graphCreated) {MDB_CreateGraph(),graphCreated = true;continue;}
 		cont: switch (rand()%9) {
 			case 0: MDB_FreeGraph();
+				fprintf(stderr, "------------------\n");
 				memset(n.a,0,n.s*PS);n.c=0;
 				memset(s.a,0,s.s*PS);s.c=0;
 				for (UP i = 0; i < nm->s; i+=2) {
@@ -228,6 +229,9 @@ void UniformRandomFuzz(void) {
 				assert(si->root == 0);
 				free(si);
 				k[0]=0;k[1] = ~0ULL;
+				s.c--;
+				for (UP i = 0; i < s.s; i++)
+					if (s.a[i] == sk) s.a[i] = 0;
 				MDB_DiscardSketch(sk);
 			} else goto cont; break;
 			case 8: if (s.c > 0) {
