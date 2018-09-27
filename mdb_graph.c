@@ -118,7 +118,8 @@ static inline UP mdb_Max(UP x, UP y) {
 
 // Frees scc but doesn't update mdb_nodeTable or
 void MDB_FreeNode(MDB_NODE node) {
-    mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node);
+	UP* slot = MDB_IdTableEntry(&mdb_nodeTable, node);
+	mdb_node* n = *(mdb_node**)slot;
     if (n->g) {
         n->g->count--;
         if (n->g->count == 0) {
@@ -129,6 +130,7 @@ void MDB_FreeNode(MDB_NODE node) {
     free(n->name);
     n->n = 0;
     free(n);
+	*slot = 0;
 }
 
 static UP mdb_RoundUp(UP x) {
@@ -319,6 +321,7 @@ void MDB_stdcall MDB_SetSketchRoot(MDB_SKETCH sketch, MDB_NODE node) {
 	log("done\n");
 }
 
+// can't sketch a constant
 MDB_NODE MDB_stdcall MDB_SketchNode(MDB_SKETCH sketch, MDB_NODETYPE type) {
 	log("MDB_SketchNode(sketch: %x, type: %x): ", sketch, type);
     if (mdb_state) return 0;
@@ -480,17 +483,18 @@ void MDB_stdcall MDB_DiscardSketchNode(MDB_NODE node) {
 void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
 	log("MDB_DiscardSketch(sketch: %x): ", sketch);
     // Don't abort on error in cleanup function
-    void* slot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
-    mdb_sketch* s = (mdb_sketch*)slot;
+    void* sslot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
+    mdb_sketch* s = (mdb_sketch*)sslot;
     for (UP i = 0; i < s->cap; i++) {
         if (s->nodes[i]) {
+			void* nslot = MDB_IdTableEntry(&mdb_nodeTable, s->nodes[i]);
             MDB_FreeNode(s->nodes[i]);
-			*(UP*)slot = mdb_nodeTable.freeList;
-			mdb_nodeTable.freeList = i;
+			*(UP*)nslot = mdb_nodeTable.freeList;
+			mdb_nodeTable.freeList = s->nodes[i];
 		}
     }
     free(s->nodes);
-    *(UP*)slot = mdb_sketchTable.freeList;
+    *(UP*)sslot = mdb_sketchTable.freeList;
     mdb_sketchTable.freeList = sketch;
 	log("done\n");
 }
