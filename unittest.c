@@ -122,7 +122,7 @@ ND A1(SK s, ND o, ND a0) {
 
 #define con MDB_CreateConst
 #define sketch MDB_StartSketch
-#define sfree MDB_FreeSketch
+#define sfree MDB_DiscardSketch
 #define graph MDB_CreateGraph
 #define gfree MDB_FreeGraph
 #define root MDB_SetSketchRoot
@@ -422,8 +422,16 @@ int Test(int i, int fn, char const** name) {
 			gfree();
 			return PASS;
 		}
+		case 13: {*name = "discard non-empty sketch";
+			if (fn == NAME) return -1;
+			graph();
+			SK s = sketch();
+			node(s, MDB_POCKET);
+			sfree(s);
+			gfree();
+		} break;
 		default: {
-            if (fn == COUNT) return 13;
+            if (fn == COUNT) return 14;
             fprintf(stderr, "\nInvalid test id.\n");
         } return FAIL;
     }

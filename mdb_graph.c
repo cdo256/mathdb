@@ -107,6 +107,7 @@ void mdb_SignalError(UP type) {
 }
 #define error(t) mdb_SignalError(t)
 #define log(...) fprintf(stderr, __VA_ARGS__)
+//#define log(...)
 
 static inline UP mdb_Min(UP x, UP y) {
     return x > y ? y : x;
@@ -220,6 +221,7 @@ static s32 mdb_ReadBit(u8* bmp, UP idx) {
 static void mdb_WriteBit(u8* bmp, UP idx, s32 val) {
     bmp[idx>>3] = (u8)((bmp[idx>>3] & ~(1<<(idx&7))) | (val<<(idx&7)));
 }
+// Node discarded when either of DiscardSketch, DiscardSketchNode, FreeGraph are caled
 void MDB_stdcall MDB_FreeGraph(void) {
 	log("MDB_FreeGraph(): ");
     // Don't abort on error in cleanup function
@@ -481,8 +483,11 @@ void MDB_stdcall MDB_DiscardSketch(MDB_SKETCH sketch) {
     void* slot = MDB_IdTableEntry(&mdb_sketchTable, sketch);
     mdb_sketch* s = (mdb_sketch*)slot;
     for (UP i = 0; i < s->cap; i++) {
-        if (s->nodes[i])
+        if (s->nodes[i]) {
             MDB_FreeNode(s->nodes[i]);
+			*(UP*)slot = mdb_nodeTable.freeList;
+			mdb_nodeTable.freeList = i;
+		}
     }
     free(s->nodes);
     *(UP*)slot = mdb_sketchTable.freeList;
@@ -639,7 +644,7 @@ MDB_GetChildren(MDB_NODE node,
     if (mdb_state) return 0;
 
     mdb_node* n = *(mdb_node**)MDB_IdTableEntry(&mdb_nodeTable, node);
-    if (n->count <= startIndex) {
+    if (n->count < startIndex) {
         error(MDB_EINVARG);
         return 0;
     }
