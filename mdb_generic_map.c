@@ -16,9 +16,17 @@ void MDB_stdcall MDB_FreeGMap(MDB_generic_map* map) {
 	free(map);
 }
 
+// the map is stored as an array,
+// all even index are the lhs
+// all odd cells are the rhs
+// the pattern [0,0] means that a cell hasn't been inited
+// the pattern [0,~0] means that a cell has been delete
 uintptr_t* MDB_stdcall MDB_GLookup(MDB_generic_map* map, uintptr_t n) {
-	uintptr_t h = 0;MDB_generic_map* m = map;
-	for (int i =0;i<PS;i++) h=h*65599+((n>>(i*8))&255);
+	uintptr_t h = 0;
+	MDB_generic_map* m = map;
+	//TODO: this hashfunction seems to be broken
+	for (int i =0;i<PS;i++)
+		h=h*65599+((n>>(i*8))&255);
 	h%=m->s;
 	uintptr_t* p = &m->a[h*2];
 	uintptr_t* d = 0;
@@ -27,7 +35,7 @@ uintptr_t* MDB_stdcall MDB_GLookup(MDB_generic_map* map, uintptr_t n) {
 		p+=2;
 		if (p >= m->a+m->s*2) p=m->a;
 	}
-	return d?d:p;
+	return p[0]==n?p:(d?d:p);
 }
 
 // returns 1 if the map grew successfully, 2 if no map grow was required and 0 on failure to grow
