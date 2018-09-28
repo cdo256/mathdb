@@ -429,9 +429,22 @@ int Test(int i, int fn, char const** name) {
 			node(s, MDB_POCKET);
 			sfree(s);
 			gfree();
+			return PASS;
+		} break;
+		case 14: {*name = "creating node after discarding sketch";
+			if (fn == NAME) return -1;
+			graph();
+			con("a");
+			SK s = sketch();
+			node(s,MDB_WORLD);
+			con("b");
+			sfree(s);
+			con("c");
+			con("d");
+			gfree();
 		} break;
 		default: {
-            if (fn == COUNT) return 14;
+            if (fn == COUNT) return 15;
             fprintf(stderr, "\nInvalid test id.\n");
         } return FAIL;
     }
