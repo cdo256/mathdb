@@ -442,6 +442,7 @@ int Test(int i, int fn, char const** name) {
 			con("c");
 			con("d");
 			gfree();
+			return PASS;
 		} break;
 		default: {
             if (fn == COUNT) return 15;
