@@ -57,22 +57,34 @@ void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s3
 	UP* k = MDB_GLookup(nm,nd);
 	node_info* ni = (node_info*)k[1];
 	sketch_info* si = (sketch_info*)MDB_GLookup(sm,ni->sketch)[1];
-	if (si->size--==1)sNonEmpty--;
+	si->size--;
+	if (si->size==0)sNonEmpty--;
 	MDB_NODETYPE type; UP childCount; char* str;
 	MDB_GetNodeInfo(nd, &type, &childCount, &str);
-	MDB_NODE* children = malloc(PS*childCount);
-	assert(childCount == MDB_GetChildren(nd, 0, childCount, children));
-	for (UP i = 0; i < childCount; i++) nUnreferenced-=(((node_info*)MDB_GLookup(nm,children[i]))->rc--==1);
-	free(children);
-	for (UP i = 0;i < n->s;i++) if (n->a[i] == nd) n->a[i] = 0;
+	if (childCount > 0) {
+		MDB_NODE* children = malloc(PS*childCount);
+		assert(childCount == MDB_GetChildren(nd, 0, childCount, children));
+		for (UP i = 0; i < childCount; i++) {
+			nUnreferenced-=(((node_info*)MDB_GLookup(nm,children[i]))->rc--==1);
+		}
+		free(children);
+	}
+	for (UP i = 0;i < n->s;i++)
+		if (n->a[i] == nd) {
+			n->a[i] = 0;
+			n->c--;
+		}
 	free(ni);
 	k[0]=0;k[1]=~0ULL;nm->d++;
 }
 
 void UniformRandomFuzz(void) {
+	int count = 0;
+
+	fprintf(stderr, "------------------\n fuzz: %d\n",++count);
 	bool graphCreated = false;
-	id_array nodeTypes = {4,4,calloc(4,PS)};
-	memcpy(nodeTypes.a,(MDB_NODETYPE[]){MDB_CONST,MDB_FORM,MDB_POCKET,MDB_WORLD},4*PS);
+	id_array nodeTypes = {3,3,calloc(3,PS)};
+	memcpy(nodeTypes.a,(MDB_NODETYPE[]){MDB_FORM,MDB_POCKET,MDB_WORLD},3*PS);
 	MDB_generic_map* sm = MDB_CreateGMap(64);
 	int sNonEmpty = 0;
 	int nUnreferenced = 0;
@@ -83,7 +95,7 @@ void UniformRandomFuzz(void) {
 		if (!graphCreated) {MDB_CreateGraph(),graphCreated = true;continue;}
 		cont: switch (rand()%9) {
 			case 0: MDB_FreeGraph();
-				fprintf(stderr, "------------------\n");
+				fprintf(stderr, "------------------\n fuzz: %d\n",++count);
 				memset(n.a,0,n.s*PS);n.c=0;
 				memset(s.a,0,s.s*PS);s.c=0;
 				for (UP i = 0; i < nm->s; i+=2) {
@@ -94,7 +106,7 @@ void UniformRandomFuzz(void) {
 				}
 				sNonEmpty=nUnreferenced = 0;
 				graphCreated = false; break;
-			case 1: if (s.c < s.s) {
+			case 1: if (s.c < s.s) { // MDB_StartSketch
 				MDB_SKETCH sk = *FirstBlank(&s) = MDB_StartSketch();s.c++;
 				UP* k = MDB_GLookup(sm, sk);
 				k[0] = sk; k[1] = (UP)malloc(sizeof(sketch_info));
@@ -102,7 +114,7 @@ void UniformRandomFuzz(void) {
 				((sketch_info*)k[1])->size = 0;
 				MDB_GrowGMap(nm, 1);
 			} else goto cont; break;
-			case 2: if (n.c < n.s && s.c > 0) {
+			case 2: if (n.c < n.s && s.c > 0) { // MDB_SketchNode
 				MDB_NODE sk = PickUniform(&s,0);
 				MDB_NODETYPE type = PickUniform(&nodeTypes,0);
 				MDB_NODE nd = *FirstBlank(&n) = MDB_SketchNode(sk,type);n.c++;
@@ -122,8 +134,10 @@ void UniformRandomFuzz(void) {
 				k[0]=sk;((sketch_info*)k[1])->size++;
 				if (k[1] == 1) sNonEmpty++;
 			} else goto cont; break;
-			case 3: if (n.c < n.s) {
-				MDB_NODE nd = *FirstBlank(&n) = MDB_CreateConst(longAssString+rand()%256);n.c++;
+			case 3: if (n.c < n.s) { // MDB_CreateConst
+				MDB_NODE nd = MDB_CreateConst(longAssString+rand()%256);
+				*FirstBlank(&n) = nd;
+				n.c++;
 				UP* k = MDB_GLookup(nm,nd);
 				k[0] = nd;k[1] = (UP)malloc(sizeof(node_info));
 				*(node_info*)k[1] = (node_info){
@@ -137,7 +151,7 @@ void UniformRandomFuzz(void) {
 				MDB_GrowGMap(nm,1);
 				nUnreferenced++;
 			} else goto cont; break;
-			case 4: if (n.c>0&&s.c>0&&sNonEmpty) {
+			case 4: if (n.c>0&&s.c>0&&sNonEmpty) { // MDB_SetSketchRoot
 				MDB_SKETCH sk;
 				do sk = PickUniform(&s,0);
 				while (((sketch_info*)MDB_GLookup(sm,sk)[1])->size == 0);
@@ -149,7 +163,7 @@ void UniformRandomFuzz(void) {
 				k[0]=sk;((sketch_info*)k[1])->root = nd;
 				MDB_GrowGMap(sm,1);
 			} else goto cont; break;
-			case 5: if (n.c>0) {
+			case 5: if (n.c>0) { // MDB_AddLink
 				MDB_NODE src,dst=PickUniform(&n,0);
 				node_info* ni;
 				//check there is a node
@@ -192,7 +206,7 @@ void UniformRandomFuzz(void) {
 				}
 				if (((node_info*)MDB_GLookup(nm,dst)[1])->rc++==0) nUnreferenced--;
 			} else goto cont; break;
-			case 6: if (sNonEmpty > 0 && nUnreferenced > 0) {
+			case 6: if (sNonEmpty > 0 && nUnreferenced > 0) { // MDB_DiscardSketchNode
 				node_info* ni;
 				MDB_NODE nd;
 				UP* k;
@@ -212,7 +226,7 @@ void UniformRandomFuzz(void) {
 				PrepareNodeRemove(nd, sm, nm, &sNonEmpty, &n, &nUnreferenced);
 				MDB_DiscardSketchNode(nd);
 			} else goto cont; break;
-			case 7: if (s.c > 0) {
+			case 7: if (s.c > 0) { // MDB_DiscardSketch
 				MDB_SKETCH sk;
 				sk = PickUniform(&s, 0);
 				UP* k = MDB_GLookup(sm, sk);
@@ -223,18 +237,20 @@ void UniformRandomFuzz(void) {
 					nd = n.a[i];
 					if (!nd) continue;
 					ni = (node_info*)MDB_GLookup(nm, nd)[1];
-					if (ni->sketch == sk) PrepareNodeRemove(nd, sm, nm, &sNonEmpty, &n, &nUnreferenced);
+					if (ni->sketch == sk)
+						PrepareNodeRemove(nd, sm, nm, &sNonEmpty, &n, &nUnreferenced);
 				}
 				assert(si->size == 0);
 				assert(si->root == 0);
 				free(si);
-				k[0]=0;k[1] = ~0ULL;
+				k[0]=0;k[1] = ~0ULL;sm->d++;
 				s.c--;
+
 				for (UP i = 0; i < s.s; i++)
 					if (s.a[i] == sk) s.a[i] = 0;
 				MDB_DiscardSketch(sk);
 			} else goto cont; break;
-			case 8: if (s.c > 0) {
+			case 8: if (s.c > 0) { // MDB_CommitSketch
 				MDB_SKETCH sk;sketch_info* si;
 				for (UP i = 0; i < s.s; i++) {
 					if (!s.a[i]) continue;
