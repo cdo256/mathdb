@@ -27,10 +27,10 @@ void MDB_DebugBreak2(void) {}
 
 #define ND MDB_NODE
 #define NM MDB_NODEMAP
-#define SK MDB_SKETCH
+#define SK MDB_DRAFT
 
 ND A9(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6,ND a7,ND a8) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG0, a1);
@@ -44,7 +44,7 @@ ND A9(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6,ND a7,ND a8) {
     return n;
 }
 ND A8(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6,ND a7) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG0, a1);
@@ -57,7 +57,7 @@ ND A8(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6,ND a7) {
     return n;
 }
 ND A7(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG0, a1);
@@ -69,7 +69,7 @@ ND A7(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6) {
     return n;
 }
 ND A6(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG0, a1);
@@ -80,7 +80,7 @@ ND A6(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5) {
     return n;
 }
 ND A5(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG0, a1);
@@ -90,7 +90,7 @@ ND A5(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4) {
     return n;
 }
 ND A4(SK s, ND o, ND a0,ND a1,ND a2,ND a3) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG0, a1);
@@ -99,7 +99,7 @@ ND A4(SK s, ND o, ND a0,ND a1,ND a2,ND a3) {
     return n;
 }
 ND A3(SK s, ND o, ND a0,ND a1,ND a2) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG1, a1);
@@ -107,28 +107,28 @@ ND A3(SK s, ND o, ND a0,ND a1,ND a2) {
     return n;
 }
 ND A2(SK s, ND o, ND a0,ND a1) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     MDB_AddLink(n, MDB_ARG1, a1);
     return n;
 }
 ND A1(SK s, ND o, ND a0) {
-    ND n = MDB_SketchNode(s, MDB_FORM);
+    ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
     return n;
 }
 
 #define con MDB_CreateConst
-#define sketch MDB_StartSketch
-#define sfree MDB_DiscardSketch
+#define draft MDB_StartDraft
+#define sfree MDB_DiscardDraft
 #define graph MDB_CreateGraph
 #define gfree MDB_FreeGraph
-#define root MDB_SetSketchRoot
-#define commit MDB_CommitSketch
+#define root MDB_SetDraftRoot
+#define commit MDB_CommitDraft
 #define mfree MDB_FreeNodeMap
-#define node MDB_SketchNode
+#define node MDB_DraftNode
 #define link MDB_AddLink
 #define lookup MDB_LookupNode
 
@@ -145,21 +145,21 @@ int Test(int i, int fn, char const** name) {
         case 1: { *name = "basic formation construction";
             if (fn == NAME) return -1;
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
+            MDB_DRAFT s = MDB_StartDraft();
             MDB_NODE plus = MDB_CreateConst("+");
             MDB_NODE eq = MDB_CreateConst("=");
             MDB_NODE one = MDB_CreateConst("1");
             MDB_NODE two = MDB_CreateConst("2");
-            MDB_NODE lhs = MDB_SketchNode(s, MDB_FORM);
-            MDB_NODE eqn = MDB_SketchNode(s, MDB_FORM);
-            MDB_SetSketchRoot(s, eqn);
+            MDB_NODE lhs = MDB_DraftNode(s, MDB_FORM);
+            MDB_NODE eqn = MDB_DraftNode(s, MDB_FORM);
+            MDB_SetDraftRoot(s, eqn);
             MDB_AddLink(lhs, MDB_APPLY, plus);
             MDB_AddLink(lhs, MDB_ARG0, one);
             MDB_AddLink(lhs, MDB_ARG1, one);
             MDB_AddLink(eqn, MDB_APPLY, eq);
             MDB_AddLink(eqn, MDB_ARG0, lhs);
             MDB_AddLink(eqn, MDB_ARG1, two);
-            MDB_CommitSketch(s);
+            MDB_CommitDraft(s);
             MDB_error e;
             check(!MDB_GetError(&e,1));
             MDB_NODETYPE t;
@@ -191,15 +191,15 @@ int Test(int i, int fn, char const** name) {
             if (fn == NAME) return -1;
             MDB_error e;
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
+            MDB_DRAFT s = MDB_StartDraft();
             MDB_NODE x = MDB_CreateConst("x");
-            MDB_NODE y = MDB_SketchNode(s, MDB_FORM);
-            MDB_NODE z = MDB_SketchNode(s, MDB_POCKET);
-            MDB_SetSketchRoot(s, y);
+            MDB_NODE y = MDB_DraftNode(s, MDB_FORM);
+            MDB_NODE z = MDB_DraftNode(s, MDB_POCKET);
+            MDB_SetDraftRoot(s, y);
             MDB_AddLink(y, MDB_APPLY, x);
             MDB_AddLink(y, MDB_ARG0, z);
             MDB_AddLink(z, MDB_ELEM, y);
-            MDB_CommitSketch(s);
+            MDB_CommitDraft(s);
             check(!MDB_GetError(&e,1));
             MDB_NODETYPE t;
             uintptr_t childCount;
@@ -224,21 +224,21 @@ int Test(int i, int fn, char const** name) {
             if (fn == NAME) return -1;
             MDB_error e;
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
-            MDB_NODE w = MDB_SketchNode(s, MDB_WORLD);
-            MDB_SetSketchRoot(s, w);
-            MDB_CommitSketch(s);
-            s = MDB_StartSketch();
+            MDB_DRAFT s = MDB_StartDraft();
+            MDB_NODE w = MDB_DraftNode(s, MDB_WORLD);
+            MDB_SetDraftRoot(s, w);
+            MDB_CommitDraft(s);
+            s = MDB_StartDraft();
             MDB_NODE k = MDB_CreateConst("k");
             MDB_NODE v0 = MDB_CreateConst("v0");
-            MDB_NODE v1 = MDB_SketchNode(s, MDB_FORM);
-            MDB_NODE v2 = MDB_SketchNode(s, MDB_FORM);
+            MDB_NODE v1 = MDB_DraftNode(s, MDB_FORM);
+            MDB_NODE v2 = MDB_DraftNode(s, MDB_FORM);
             MDB_AddLink(v1, MDB_APPLY, k);
             MDB_AddLink(v1, MDB_ARG0, v0);
             MDB_AddLink(v2, MDB_APPLY, k);
             MDB_AddLink(v2, MDB_ARG0, v1);
-            MDB_SetSketchRoot(s, v2);
-            MDB_CommitSketch(s);
+            MDB_SetDraftRoot(s, v2);
+            MDB_CommitDraft(s);
             MDB_AddLink(w, MDB_ELEM, v0);
             MDB_AddLink(w, MDB_ELEM, v1);
             MDB_AddLink(w, MDB_ELEM, v2);
@@ -271,14 +271,14 @@ int Test(int i, int fn, char const** name) {
             if (fn == NAME) return -1;
             MDB_error e;
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
-            MDB_NODE n1 = MDB_SketchNode(s, MDB_WORLD);
-            MDB_NODE n2 = MDB_SketchNode(s, MDB_FORM);
-            MDB_SetSketchRoot(s, n1);
-            MDB_DiscardSketchNode(s);
-            MDB_NODE n3 = MDB_SketchNode(s, MDB_POCKET);
-            MDB_SetSketchRoot(s, n3);
-            MDB_CommitSketch(s);
+            MDB_DRAFT s = MDB_StartDraft();
+            MDB_NODE n1 = MDB_DraftNode(s, MDB_WORLD);
+            MDB_NODE n2 = MDB_DraftNode(s, MDB_FORM);
+            MDB_SetDraftRoot(s, n1);
+            MDB_DiscardDraftNode(s);
+            MDB_NODE n3 = MDB_DraftNode(s, MDB_POCKET);
+            MDB_SetDraftRoot(s, n3);
+            MDB_CommitDraft(s);
             check(!MDB_GetError(&e,1));
             MDB_NODETYPE t;
             uintptr_t childCount;
@@ -290,12 +290,12 @@ int Test(int i, int fn, char const** name) {
             MDB_FreeGraph();
             return PASS;
 		}
-        case 5: { *name = "discard sketch";
+        case 5: { *name = "discard draft";
             if (fn == NAME) return -1;
             MDB_error e;
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
-            MDB_DiscardSketch(s);
+            MDB_DRAFT s = MDB_StartDraft();
+            MDB_DiscardDraft(s);
             check(!MDB_GetError(&e,1));
             MDB_FreeGraph();
             return PASS;
@@ -310,11 +310,11 @@ int Test(int i, int fn, char const** name) {
         case 7: { *name = "memory leak 2";
             if (fn == NAME) return -1;
             MDB_CreateGraph();
-            //MDB_SKETCH s = MDB_StartSketch();
-            //MDB_NODE w = MDB_SketchNode(s, MDB_WORLD);
-            //MDB_SetSketchRoot(s, w);
-            //MDB_CommitSketch(s);
-            MDB_StartSketch();
+            //MDB_DRAFT s = MDB_StartDraft();
+            //MDB_NODE w = MDB_DraftNode(s, MDB_WORLD);
+            //MDB_SetDraftRoot(s, w);
+            //MDB_CommitDraft(s);
+            MDB_StartDraft();
             MDB_FreeGraph();
             return PASS;
         }
@@ -323,28 +323,28 @@ int Test(int i, int fn, char const** name) {
             MDB_CreateGraph();
             MDB_FreeGraph();
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
-            MDB_NODE n1 = MDB_SketchNode(s, MDB_WORLD);
-            MDB_SketchNode(s, MDB_FORM);
-            MDB_SetSketchRoot(s, n1);
-            MDB_DiscardSketchNode(s);
-            MDB_NODE n3 = MDB_SketchNode(s, MDB_POCKET);
-            MDB_SetSketchRoot(s, n3);
-            MDB_CommitSketch(s);
+            MDB_DRAFT s = MDB_StartDraft();
+            MDB_NODE n1 = MDB_DraftNode(s, MDB_WORLD);
+            MDB_DraftNode(s, MDB_FORM);
+            MDB_SetDraftRoot(s, n1);
+            MDB_DiscardDraftNode(s);
+            MDB_NODE n3 = MDB_DraftNode(s, MDB_POCKET);
+            MDB_SetDraftRoot(s, n3);
+            MDB_CommitDraft(s);
             MDB_FreeGraph();
             return PASS;
         }
         case 9: { *name = "segfault 2";
             if (fn == NAME) return -1;
             MDB_CreateGraph();
-            MDB_SKETCH s = MDB_StartSketch();
-            MDB_NODE n1 = MDB_SketchNode(s, MDB_WORLD);
-            MDB_SketchNode(s, MDB_FORM);
-            MDB_SetSketchRoot(s, n1);
-            MDB_DiscardSketchNode(s);
-            MDB_NODE n3 = MDB_SketchNode(s, MDB_POCKET);
-            MDB_SetSketchRoot(s, n3);
-            MDB_CommitSketch(s);
+            MDB_DRAFT s = MDB_StartDraft();
+            MDB_NODE n1 = MDB_DraftNode(s, MDB_WORLD);
+            MDB_DraftNode(s, MDB_FORM);
+            MDB_SetDraftRoot(s, n1);
+            MDB_DiscardDraftNode(s);
+            MDB_NODE n3 = MDB_DraftNode(s, MDB_POCKET);
+            MDB_SetDraftRoot(s, n3);
+            MDB_CommitDraft(s);
             MDB_FreeGraph();
             return PASS;
         }
@@ -365,7 +365,7 @@ int Test(int i, int fn, char const** name) {
         case 11: { *name = "simple formation match";
             if (fn == NAME) return -1;
             graph();
-            SK s = sketch();
+            SK s = draft();
             ND var = con("var");
             ND a = con("a");
             ND b = con("b");
@@ -389,7 +389,7 @@ int Test(int i, int fn, char const** name) {
 		case 12: {*name = "simple pattern search";
 			if (fn == NAME) return -1;
 			graph();
-			SK s = sketch();
+			SK s = draft();
 			ND var = con("var");
 			ND a = con("a");
 			ND plus = con("+");
@@ -422,20 +422,20 @@ int Test(int i, int fn, char const** name) {
 			gfree();
 			return PASS;
 		}
-		case 13: {*name = "discard non-empty sketch";
+		case 13: {*name = "discard non-empty draft";
 			if (fn == NAME) return -1;
 			graph();
-			SK s = sketch();
+			SK s = draft();
 			node(s, MDB_POCKET);
 			sfree(s);
 			gfree();
 			return PASS;
 		} break;
-		case 14: {*name = "creating node after discarding sketch";
+		case 14: {*name = "creating node after discarding draft";
 			if (fn == NAME) return -1;
 			graph();
 			con("a");
-			SK s = sketch();
+			SK s = draft();
 			node(s,MDB_WORLD);
 			con("b");
 			sfree(s);

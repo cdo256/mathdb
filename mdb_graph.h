@@ -1,6 +1,6 @@
 #include <stdint.h>
 typedef uintptr_t MDB_NODE;
-typedef uintptr_t MDB_SKETCH;
+typedef uintptr_t MDB_DRAFT;
 typedef uintptr_t MDB_NODEMAP;
 typedef int MDB_NODETYPE;
 typedef int MDB_LINKDESC;
