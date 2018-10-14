@@ -104,7 +104,7 @@ void UniformRandomFuzz(void) {
     id_array n = {.c=0,.s=MAX_NODE,.a=calloc(MAX_NODE,PS)};
     bool exit = false;
     int steps = 0;
-    while (!exit && steps++ < 3) {
+    while (!exit && steps++ < 256) {
         if (!graphCreated) {
             fprintf(stderr, "------------------\n fuzz: %d\n",++count);
             MDB_CreateGraph(),graphCreated = true;continue;}
