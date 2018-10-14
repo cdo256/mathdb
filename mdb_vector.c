@@ -10,12 +10,12 @@ void MDB_stdcall MDB_FreeVector(MDB_vector* v) {
 UP MDB_stdcall MDB_SetVectorSize(MDB_vector* v, UP size, UP fill) {
     UP* a = realloc(v->a, size*PS);
     if (a||size==0) {
-        v->c=size;
         v->a=a;
         if (a && (fill>>8)<<8 == fill>>8)
-            memset(a,fill&255,size*PS);
-        else for (UP i = 0; i < size; i++)
+            memset(a+v->c,fill&255,(size-v->c)*PS);
+        else for (UP i = v->c; i < size; i++)
             a[i] = fill;
+        v->c=size;
         return size;
     }
     else return ~0ULL;
