@@ -131,7 +131,7 @@
     <ClCompile Include="..\..\..\mdb_mem.c" />
     <ClCompile Include="..\..\..\mdb_multiset.c" />
     <ClCompile Include="..\..\..\mdb_node_map.c" />
-    <ClCompile Include="..\..\..\mdb_serch_graph.c" />
+    <ClCompile Include="..\..\..\mdb_search_graph.c" />
     <ClCompile Include="..\..\..\mdb_simple_graph.c" />
     <ClCompile Include="..\..\..\mdb_vector.c" />
     <ClCompile Include="..\..\..\unittest.c" />

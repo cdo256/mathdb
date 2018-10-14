@@ -103,7 +103,7 @@
     <ClCompile Include="..\..\..\mdb_node_map.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\mdb_serch_graph.c">
+    <ClCompile Include="..\..\..\mdb_search_graph.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
