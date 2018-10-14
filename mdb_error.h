@@ -1,3 +1,4 @@
+#pragma once
 #include "mdb_base.h"
 
 #pragma warning(push)
@@ -21,6 +22,6 @@ typedef struct MDB_error {
 #define MDB_EMEM                0x00000002U
 #define MDB_EINVCALL            0x00000008U
 #define MDB_EINVARG             0x00000010U
-#define MDB_EINCOMPLETEDRAFT   0x00000020U
+#define MDB_EINCOMPLETEDRAFT    0x00000020U
 #define MDB_EINTOVERFLOW        0x00000040U
 #define MDB_EUNINIT             0x00000080U

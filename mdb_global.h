@@ -1,9 +1,24 @@
+#pragma once
+#include "mdb_base.h"
+
 // This file contains arch checks and convienience macros.
 // Don't include from external interfaces, use mdb_base.h instead.
 #include <stddef.h>
 #include <stdint.h>
 #include <limits.h>
 #include <assert.h>
+
+#if defined(_DEBUG) || defined(WIN32_DEBUG)
+#define DEBUG 1
+#else
+#define DEBUG 0
+#endif
+
+#if DEBUG
+#define verify(x) assert(x)
+#else
+#define verify(x) ((void)x)
+#endif
 #define fail() assert(0)
 
 typedef uint64_t u64;

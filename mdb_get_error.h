@@ -1,3 +1,4 @@
+#pragma once
 #include "mdb_base.h"
 #include "mdb_error.h"
 

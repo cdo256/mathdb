@@ -3,9 +3,11 @@
 #include "mdb_edit_graph.h"
 #include "mdb_get_error.h"
 #include "mdb_read_graph.h"
+#include "mdb_debug.h"
 #include "mdb_get_mem_info.h"
 #include "mdb_search_graph.h"
-#include "mdb_read_map.h"
+#include "mdb_read_node_map.h"
+#include "mdb_free_node_map.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -123,14 +125,14 @@ ND A1(SK s, ND o, ND a0) {
 #define con MDB_CreateConst
 #define draft MDB_StartDraft
 #define sfree MDB_DiscardDraft
-#define graph MDB_CreateGraph
+#define g MDB_CreateGraph
 #define gfree MDB_FreeGraph
 #define root MDB_SetDraftRoot
 #define commit MDB_CommitDraft
 #define mfree MDB_FreeNodeMap
 #define node MDB_DraftNode
 #define link MDB_AddLink
-#define lookup MDB_LookupNode
+#define lookup MDB_MapNode
 
 int Test(int i, int fn, char const** name) {
     switch (i) {
@@ -162,31 +164,18 @@ int Test(int i, int fn, char const** name) {
             MDB_CommitDraft(s);
             MDB_error e;
             check(!MDB_GetError(&e,1));
-            MDB_NODETYPE t;
-            uintptr_t childCount;
-            char* str;
-            MDB_NODE c[3];
-            MDB_GetNodeInfo(eq, &t, &childCount, &str);
-            check(!strcmp("=", str) && t == MDB_CONST && childCount == 0);
-            MDB_GetNodeInfo(plus, &t, &childCount, &str);
-            check(!strcmp("+", str) && t == MDB_CONST && childCount == 0);
-            MDB_GetNodeInfo(one, &t, &childCount, &str);
-            check(!strcmp("1", str) && t == MDB_CONST && childCount == 0);
-            MDB_GetNodeInfo(two, &t, &childCount, &str);
-            check(!strcmp("2", str) && t == MDB_CONST && childCount == 0);
-            MDB_GetNodeInfo(lhs, &t, &childCount, &str);
-            check(MDB_GetChildren(lhs, 0, 3, c) == 3);
-            check(!str && t == MDB_FORM && childCount == 3 &&
-                c[0] == plus && c[1] == one && c[2] == one);
-            MDB_GetNodeInfo(eqn, &t, &childCount, &str);
-            check(MDB_GetChildren(eqn, 0, 3, c) == 3);
-            check(!str && t == MDB_FORM && childCount == 3 &&
-                c[0] == eq && c[1] == lhs && c[2] == two);
-
+            check(!strcmp("=", MDB_NodeName(eq)) && MDB_Type(eq) == MDB_CONST && MDB_ChildCount(eq) == 0);
+            check(!strcmp("+", MDB_NodeName(plus)) && MDB_Type(plus) == MDB_CONST && MDB_ChildCount(plus) == 0);
+            check(!strcmp("1", MDB_NodeName(one)) && MDB_Type(one) == MDB_CONST && MDB_ChildCount(one) == 0);
+            check(!strcmp("2", MDB_NodeName(two)) && MDB_Type(two) == MDB_CONST && MDB_ChildCount(two) == 0);
+            check(!MDB_NodeName(lhs) && MDB_Type(lhs) == MDB_FORM && MDB_ChildCount(lhs) == 3 &&
+                MDB_Child(lhs,0) == plus && MDB_Child(lhs,1) == one && MDB_Child(lhs,2) == one);
+            check(!MDB_NodeName(eqn) && MDB_Type(eqn) == MDB_FORM && MDB_ChildCount(eqn) == 3 &&
+                MDB_Child(eqn,0) == eq && MDB_Child(eqn,1) == lhs && MDB_Child(eqn,2) == two);
             check(!MDB_GetError(&e,1));
             MDB_FreeGraph();
             return PASS;
-		}
+        }
         case 2: { *name = "simple cycle";
             if (fn == NAME) return -1;
             MDB_error e;
@@ -201,25 +190,15 @@ int Test(int i, int fn, char const** name) {
             MDB_AddLink(z, MDB_ELEM, y);
             MDB_CommitDraft(s);
             check(!MDB_GetError(&e,1));
-            MDB_NODETYPE t;
-            uintptr_t childCount;
-            char* str;
-            MDB_NODE c[2];
-            MDB_GetNodeInfo(x, &t, &childCount, &str);
-            check(!strcmp("x", str) && t == MDB_CONST && childCount == 0);
-            MDB_GetNodeInfo(y, &t, &childCount, &str);
-            check(MDB_GetChildren(y, 0, 2, c) == childCount);
-            check(!str && t == MDB_FORM && childCount == 2 &&
-                c[0] == x && c[1] == z);
-            MDB_GetNodeInfo(z, &t, &childCount, &str);
-            check(MDB_GetChildren(z, 0, 1, c) == childCount);
-            check(!str && t == MDB_POCKET && childCount == 1 &&
-                c[0] == y);
-
+            check(!strcmp("x", MDB_NodeName(x)) && MDB_Type(x) == MDB_CONST && MDB_ChildCount(x) == 0);
+            check(!MDB_NodeName(y) && MDB_Type(y) == MDB_FORM && MDB_ChildCount(y) == 2 &&
+                MDB_Child(y,0) == x && MDB_Child(y,1) == z);
+            check(!MDB_NodeName(z) && MDB_Type(z) == MDB_POCKET && MDB_ChildCount(z) == 1 &&
+                MDB_Child(z,0) == y);
             check(!MDB_GetError(&e,1));
             MDB_FreeGraph();
             return PASS;
-		}
+        }
         case 3: { *name = "simple world";
             if (fn == NAME) return -1;
             MDB_error e;
@@ -243,30 +222,18 @@ int Test(int i, int fn, char const** name) {
             MDB_AddLink(w, MDB_ELEM, v1);
             MDB_AddLink(w, MDB_ELEM, v2);
             check(!MDB_GetError(&e,1));
-            MDB_NODETYPE t;
-            uintptr_t childCount;
-            char* str;
-            MDB_NODE c[3];
-            MDB_GetNodeInfo(k, &t, &childCount, &str);
-            check(!strcmp("k", str));
-            MDB_GetNodeInfo(v0, &t, &childCount, &str);
-            check(!strcmp("v0", str));
-            MDB_GetNodeInfo(v1, &t, &childCount, &str);
-            check(MDB_GetChildren(v1, 0, childCount, c) == childCount);
-            check(!str && t == MDB_FORM && childCount == 2 &&
-                c[0] == k && c[1] == v0);
-            MDB_GetNodeInfo(v2, &t, &childCount, &str);
-            check(MDB_GetChildren(v2, 0, childCount, c) == childCount);
-            check(!str && t == MDB_FORM && childCount == 2 &&
-                c[0] == k && c[1] == v1);
-            MDB_GetNodeInfo(w, &t, &childCount, &str);
-            check(MDB_GetChildren(w, 0, childCount, c) == childCount);
-            check(!str && t == MDB_WORLD && childCount == 3 &&
-                c[0] == v0 && c[1] == v1 && c[2] == v2);
+            check(!strcmp("k", MDB_NodeName(k)));
+            check(!strcmp("v0", MDB_NodeName(v0)));
+            check(!MDB_NodeName(v1) && MDB_Type(v1) == MDB_FORM && MDB_ChildCount(v1) == 2 &&
+                MDB_Child(v1,0) == k && MDB_Child(v1,1) == v0);
+            check(!MDB_NodeName(v2) && MDB_Type(v2) == MDB_FORM && MDB_ChildCount(v2) == 2 &&
+                MDB_Child(v2,0) == k && MDB_Child(v2,1) == v1);
+            check(!MDB_NodeName(w) && MDB_Type(w) == MDB_WORLD && MDB_ChildCount(w) == 3 &&
+                MDB_Child(w,0) == v0 && MDB_Child(w,1) == v1 && MDB_Child(w,2) == v2);
             check(!MDB_GetError(&e,1));
             MDB_FreeGraph();
             return PASS;
-		}
+        }
         case 4: { *name = "discard s node";
             if (fn == NAME) return -1;
             MDB_error e;
@@ -280,16 +247,11 @@ int Test(int i, int fn, char const** name) {
             MDB_SetDraftRoot(s, n3);
             MDB_CommitDraft(s);
             check(!MDB_GetError(&e,1));
-            MDB_NODETYPE t;
-            uintptr_t childCount;
-            char* str;
-            MDB_GetNodeInfo(n2, &t, &childCount, &str);
-            check(t == MDB_FORM);
-            MDB_GetNodeInfo(n3, &t, &childCount, &str);
-            check(t == MDB_POCKET);
+            check(MDB_Type(n2) == MDB_FORM);
+            check(MDB_Type(n3) == MDB_POCKET);
             MDB_FreeGraph();
             return PASS;
-		}
+        }
         case 5: { *name = "discard draft";
             if (fn == NAME) return -1;
             MDB_error e;
@@ -358,13 +320,13 @@ int Test(int i, int fn, char const** name) {
             check(!map);
             map = MDB_MatchPattern(a,a,c);
             check(map);
-			MDB_FreeNodeMap(map);
+            MDB_FreeNodeMap(map);
             MDB_FreeGraph();
             return PASS;
         }
         case 11: { *name = "simple formation match";
             if (fn == NAME) return -1;
-            graph();
+            g();
             SK s = draft();
             ND var = con("var");
             ND a = con("a");
@@ -380,72 +342,117 @@ int Test(int i, int fn, char const** name) {
             commit(s);
             NM map = MDB_MatchPattern(sum, two,c);
             check(map != 0);
-            check(MDB_LookupNode(map, va) == one);
-            check(MDB_LookupNode(map, vb) == one);
-			mfree(map);
+            check(MDB_MapNode(map, va) == one);
+            check(MDB_MapNode(map, vb) == one);
+            mfree(map);
             gfree();
             return PASS;
         }
-		case 12: {*name = "simple pattern search";
-			if (fn == NAME) return -1;
-			graph();
-			SK s = draft();
-			ND var = con("var");
-			ND a = con("a");
-			ND plus = con("+");
-			ND one = con("1");
-			ND two = con("2");
-			ND c = con("c");
-			ND va = A2(s,var,c,a);
-			ND opo = A2(s,plus,one,one);
-			ND opt = A2(s,plus,one,two);
-			ND tpo = A2(s,plus,two,one);
-			ND tpt = A2(s,plus,two,two);
-			ND world = node(s, MDB_WORLD);
-			link(world,MDB_ELEM,opo);
-			link(world,MDB_ELEM,opt);
-			link(world,MDB_ELEM,tpo);
-			link(world,MDB_ELEM,tpt);
-			root(s,world);
-			ND apt = A2(s,plus,va,two);
-			commit(s);
-			ND w = MDB_MatchAllNodes(apt,world,c);
-			check(w);
-			MDB_NODETYPE t; UP cc; char* str;
-			MDB_GetNodeInfo(w, &t, &cc, &str);
-			check(cc == 2 && !str);
-			check(t == MDB_POCKET || t == MDB_WORLD);//TODO: which one is correct (or should we allow both)?
-			ND children[2];
-			check(MDB_GetChildren(w, 0, 2, children) == 2);
-			check((children[0]==opt && children[1]==tpt) ||
-				(children[1]==opt && children[0]==tpt));
-			gfree();
-			return PASS;
-		}
-		case 13: {*name = "discard non-empty draft";
-			if (fn == NAME) return -1;
-			graph();
-			SK s = draft();
-			node(s, MDB_POCKET);
-			sfree(s);
-			gfree();
-			return PASS;
-		} break;
-		case 14: {*name = "creating node after discarding draft";
-			if (fn == NAME) return -1;
-			graph();
-			con("a");
-			SK s = draft();
-			node(s,MDB_WORLD);
-			con("b");
-			sfree(s);
-			con("c");
-			con("d");
-			gfree();
-			return PASS;
-		} break;
-		default: {
-            if (fn == COUNT) return 15;
+        case 12: {*name = "simple pattern search";
+            if (fn == NAME) return -1;
+            g();
+            SK s = draft();
+            ND var = con("var");
+            ND a = con("a");
+            ND plus = con("+");
+            ND one = con("1");
+            ND two = con("2");
+            ND c = con("c");
+            ND va = A2(s,var,c,a);
+            ND opo = A2(s,plus,one,one);
+            ND opt = A2(s,plus,one,two);
+            ND tpo = A2(s,plus,two,one);
+            ND tpt = A2(s,plus,two,two);
+            ND world = node(s, MDB_WORLD);
+            link(world,MDB_ELEM,opo);
+            link(world,MDB_ELEM,opt);
+            link(world,MDB_ELEM,tpo);
+            link(world,MDB_ELEM,tpt);
+            root(s,world);
+            ND apt = A2(s,plus,va,two);
+            commit(s);
+            ND w = MDB_MatchAllNodes(apt,world,c);
+            check(w);
+            check(MDB_ChildCount(w) == 2 && !MDB_NodeName(w));
+            check(MDB_Type(w) == MDB_POCKET || MDB_Type(w) == MDB_WORLD);//TODO: which one is correct (or should we allow both)?
+            check((MDB_Child(w,0)==opt && MDB_Child(w,1)==tpt) ||
+                (MDB_Child(w,1)==opt && MDB_Child(w,0)==tpt));
+            gfree();
+            return PASS;
+        }
+        case 13: {*name = "discard non-empty draft";
+            if (fn == NAME) return -1;
+            g();
+            SK s = draft();
+            node(s, MDB_POCKET);
+            sfree(s);
+            gfree();
+            return PASS;
+        } break;
+        case 14: {*name = "creating node after discarding draft";
+            if (fn == NAME) return -1;
+            g();
+            con("a");
+            SK s = draft();
+            node(s,MDB_WORLD);
+            con("b");
+            sfree(s);
+            con("c");
+            con("d");
+            gfree();
+            return PASS;
+        } break;
+        case 15: {*name = "trigger error on linking two drafts (simple)";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            SK s1 = MDB_StartDraft();
+            SK s2 = MDB_StartDraft();
+            ND n1 = MDB_DraftNode(s1, MDB_POCKET);
+            ND n2 = MDB_DraftNode(s2, MDB_POCKET);
+            MDB_AddLink(n1, MDB_ELEM, n2);
+            MDB_error e;
+            check(MDB_GetError(&e,1) && e.id == MDB_EINVARG);
+            check(!MDB_GetError(&e,0));
+            MDB_FreeGraph();
+            return PASS;
+        } break;
+        case 16: {*name = "trigger error on linking two draftss (complex)";
+            if (fn == NAME) return -1;
+            MDB_CreateGraph();
+            ND n1,n2,n3,n4,n5;
+            SK s1,s2,s3;
+            s1 = MDB_StartDraft();
+            n1 = MDB_CreateConst("a");
+            n2=MDB_DraftNode(s1, MDB_FORM);
+            s2=MDB_StartDraft();
+            n3=MDB_DraftNode(s2, MDB_FORM);
+            MDB_AddLink(n2, MDB_APPLY, n3);
+            n4=MDB_DraftNode(s1, MDB_POCKET);
+            s3=MDB_StartDraft();
+            n5=MDB_CreateConst("b");
+            MDB_DiscardDraft(s1);
+            MDB_DiscardDraft(s3);
+            n4=MDB_DraftNode(s2, MDB_POCKET);
+            n5=MDB_DraftNode(s2, MDB_WORLD);
+            MDB_DiscardDraftNode(n4);
+            MDB_FreeGraph();
+            return PASS;
+        } break;
+        case 17: {*name = "discard root node";
+            if (fn==NAME) return -1;
+            ND n1,n2;
+            SK s;
+            MDB_CreateGraph();
+            s = MDB_StartDraft();
+            n1 = MDB_DraftNode(s, MDB_WORLD);
+            MDB_SetDraftRoot(s, n1);
+            n2 = MDB_DraftNode(s, MDB_WORLD);
+            MDB_DiscardDraftNode(n1);
+            MDB_FreeGraph();
+            return PASS;
+        } break;
+        default: {
+            if (fn == COUNT) return 18;
             fprintf(stderr, "\nInvalid test id.\n");
         } return FAIL;
     }
@@ -469,6 +476,7 @@ int RunTest(int id) {
 
 #if 0
 int main(int argc, char const* const* argv) {
+    MDB_InitDebug();
     int failCount = 0;
     char* s;
     int testCount = Test(-1,COUNT,&s);
@@ -491,7 +499,7 @@ int main(int argc, char const* const* argv) {
         printf("\n");
     }
 #ifdef _WIN32
-	system("pause");
+    system("pause");
 #endif
 }
 #endif

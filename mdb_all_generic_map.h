@@ -1,10 +1,6 @@
+#pragma once
 #include "mdb_base.h"
-#include <stdint.h>
-
-typedef struct MDB_generic_map {
-	uintptr_t c,s,d;
-	uintptr_t* a;
-} MDB_generic_map;
+#include "mdb_generic_map.h"
 
 MDB_generic_map* MDB_stdcall MDB_CreateGMap(uintptr_t size);
 void MDB_stdcall MDB_FreeGMap(MDB_generic_map* map);

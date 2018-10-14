@@ -69,6 +69,7 @@
     <NMakeReBuildCommandLine>make rebuild</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
     <SourcePath>$(ProjectDir)..\..\..;C:\Files\Current\SGL\mathdb;$(SourcePath)</SourcePath>
+    <NMakeIncludeSearchPath>C:\Files\Current\SGL\mathdb;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <NMakeBuildCommandLine>make</NMakeBuildCommandLine>
@@ -103,23 +104,36 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\mdb_alloc_mem.h" />
     <ClInclude Include="..\..\..\mdb_all_generic_map.h" />
+    <ClInclude Include="..\..\..\mdb_all_multiset.h" />
+    <ClInclude Include="..\..\..\mdb_all_vector.h" />
     <ClInclude Include="..\..\..\mdb_base.h" />
+    <ClInclude Include="..\..\..\mdb_create_node_map.h" />
+    <ClInclude Include="..\..\..\mdb_debug.h" />
     <ClInclude Include="..\..\..\mdb_edit_graph.h" />
     <ClInclude Include="..\..\..\mdb_error.h" />
+    <ClInclude Include="..\..\..\mdb_free_node_map.h" />
+    <ClInclude Include="..\..\..\mdb_generic_map.h" />
     <ClInclude Include="..\..\..\mdb_get_error.h" />
     <ClInclude Include="..\..\..\mdb_get_mem_info.h" />
     <ClInclude Include="..\..\..\mdb_global.h" />
     <ClInclude Include="..\..\..\mdb_graph.h" />
     <ClInclude Include="..\..\..\mdb_manage.h" />
+    <ClInclude Include="..\..\..\mdb_node_map.h" />
     <ClInclude Include="..\..\..\mdb_read_graph.h" />
     <ClInclude Include="..\..\..\mdb_read_map.h" />
     <ClInclude Include="..\..\..\mdb_search_graph.h" />
+    <ClInclude Include="..\..\..\mdb_use_node_map.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\fuzztest.c" />
     <ClCompile Include="..\..\..\mdb_generic_map.c" />
     <ClCompile Include="..\..\..\mdb_graph.c" />
     <ClCompile Include="..\..\..\mdb_mem.c" />
+    <ClCompile Include="..\..\..\mdb_multiset.c" />
+    <ClCompile Include="..\..\..\mdb_node_map.c" />
+    <ClCompile Include="..\..\..\mdb_serch_graph.c" />
+    <ClCompile Include="..\..\..\mdb_simple_graph.c" />
+    <ClCompile Include="..\..\..\mdb_vector.c" />
     <ClCompile Include="..\..\..\unittest.c" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
