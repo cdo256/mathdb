@@ -1,7 +1,16 @@
 <component name="ProjectDictionaryState">
   <dictionary name="cdo">
     <words>
+      <w>asmx</w>
+      <w>astextplain</w>
       <w>badbit</w>
+      <w>calloc</w>
+      <w>csharp</w>
+      <w>csproj</w>
+      <w>dbproj</w>
+      <w>docx</w>
+      <w>drafts</w>
+      <w>ebfb</w>
       <w>eincompletedraft</w>
       <w>eincompletedraftbit</w>
       <w>eintoverflow</w>
@@ -16,11 +25,35 @@
       <w>enone</w>
       <w>euninit</w>
       <w>euninitbit</w>
+      <w>fetest</w>
+      <w>fsproj</w>
+      <w>fuzztest</w>
+      <w>ifeq</w>
       <w>invalidnodetype</w>
       <w>linkdesc</w>
+      <w>lsproj</w>
+      <w>mathdb</w>
+      <w>modelproj</w>
+      <w>mset</w>
+      <w>msysgit</w>
+      <w>ndebug</w>
+      <w>nodemap</w>
       <w>nodetype</w>
+      <w>occurrenc</w>
+      <w>otest</w>
+      <w>platopt</w>
+      <w>proj</w>
       <w>realloc</w>
+      <w>sfree</w>
+      <w>sqlproj</w>
       <w>unrooted</w>
+      <w>vbproj</w>
+      <w>vcproj</w>
+      <w>vcxproj</w>
+      <w>wextra</w>
+      <w>wixproj</w>
+      <w>wwaproj</w>
+      <w>xmlns</w>
     </words>
   </dictionary>
 </component>

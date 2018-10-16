@@ -416,7 +416,7 @@ int Test(int i, int fn, char const** name) {
             MDB_FreeGraph();
             return PASS;
         }
-        case 16: {*name = "trigger error on linking two draftss (complex)";
+        case 16: {*name = "trigger error on linking two drafts (complex)";
             if (fn == NAME) return -1;
             MDB_CreateGraph();
             ND n2,n3,n4;

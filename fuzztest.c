@@ -21,7 +21,7 @@
 
 #define MAX_DRAFT 10
 #define MAX_NODE 40
-#define MAX_MAP 10
+#define MAX_MAP 11
 
 typedef struct id_array {
     UP c, s;
@@ -95,11 +95,11 @@ void UniformRandomFuzz(void) {
     bool graphCreated = false;
     id_array nodeTypes = {3,3,calloc(3,PS)};
     memcpy(nodeTypes.a,(MDB_NODETYPE[]){MDB_FORM,MDB_POCKET,MDB_WORLD},3*PS);
-    MDB_generic_map* sm = MDB_CreateGMap(11);
+    MDB_generic_map* sm = MDB_CreateGMap(MAX_MAP);
     s32 sNonEmpty = 0;
     s32 sNonEmptyUnrooted = 0;
     s32 nUnreferenced = 0;
-    MDB_generic_map* nm = MDB_CreateGMap(11);
+    MDB_generic_map* nm = MDB_CreateGMap(MAX_MAP);
     id_array s = {.c=0,.s=MAX_DRAFT,.a=calloc(MAX_DRAFT,PS)};
     id_array n = {.c=0,.s=MAX_NODE,.a=calloc(MAX_NODE,PS)};
     bool exit = false;
@@ -120,8 +120,8 @@ void UniformRandomFuzz(void) {
                 }
                 MDB_FreeGMap(sm);
                 MDB_FreeGMap(nm);
-                sm = MDB_CreateGMap(11);
-                nm = MDB_CreateGMap(11);
+                sm = MDB_CreateGMap(MAX_MAP);
+                nm = MDB_CreateGMap(MAX_MAP);
                 sNonEmpty=nUnreferenced=sNonEmptyUnrooted = 0;
                 graphCreated = false; exit = true; break;
             case 1: if (s.c < s.s) { // MDB_StartDraft
@@ -156,8 +156,8 @@ void UniformRandomFuzz(void) {
             } else goto cont; break;
             case 3: if (n.c < n.s) { // MDB_CreateConst
                 char name[3];
-                name[0] = rand()%(127-32)+32;
-                name[1] = rand()%(127-32)+32;
+                name[0] = (u8)(rand()%(127-32)+32);
+                name[1] = (u8)(rand()%(127-32)+32);
                 name[2] = 0;
                 MDB_NODE nd = MDB_CreateConst(name);
                 *FirstBlank(&n) = nd;
@@ -312,7 +312,8 @@ void UniformRandomFuzz(void) {
                 k[0] = 0; k[1] = ~0ULL;sm->d++;
                 MDB_CommitDraft(sk);
                 sNonEmpty--;
-            }
+            } else goto cont; break;
+            default: assert(0);
         }
     }
     free(nodeTypes.a);

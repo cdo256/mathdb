@@ -3,7 +3,7 @@
 #pragma once
 #include "mdb_base.h"
 
-// This file contains arch checks and convienience macros.
+// This file contains arch checks and convenience macros.
 // Don't include from external interfaces, use mdb_base.h instead.
 #include <stddef.h>
 #include <stdint.h>

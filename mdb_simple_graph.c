@@ -16,7 +16,7 @@ typedef struct mdb_graph {
     s32 init, badbit;
     MDB_mset nodes,drafts;
 } mdb_graph;
-static mdb_graph g = {.init = 0,.badbit = 0};
+static mdb_graph g = {.init = 0,.badbit = 1};
 
 typedef struct mdb_node mdb_node;
 
@@ -35,6 +35,7 @@ typedef struct mdb_node {
 
 void MDB_stdcall MDB_CreateGraph(void) {
     log("MDB_CreateGraph(): ");
+    assert(!g.init);
     g = (mdb_graph){
         .init = 1,
         .badbit = 0,
@@ -72,6 +73,7 @@ void MDB_stdcall MDB_FreeGraph(void) {
 
 MDB_DRAFT MDB_stdcall
 MDB_StartDraft(void) {
+    if (g.badbit) return 0;
     log("MDB_StartDraft(): ");
     mdb_draft* d = malloc(sizeof(mdb_draft));
     if (!d) {g.badbit = 1; return 0;}
@@ -88,6 +90,7 @@ MDB_StartDraft(void) {
 }
 MDB_NODE MDB_stdcall
 MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
+    if (g.badbit) return 0;
     log("MDB_DraftNode(draft: %x, type: %x): ", (u32)draft, (u32)type);
     mdb_draft* d = (mdb_draft*)draft;
     mdb_node* n = malloc(sizeof(mdb_node));
@@ -111,6 +114,7 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
 }
 MDB_NODE MDB_stdcall
 MDB_CreateConst(const char* name) {
+    if (g.badbit) return 0;
     log("MDB_CreateConst(name: %s): ", name);
     UP len = strlen(name)+1;
     mdb_node* n = malloc(sizeof(mdb_node));
@@ -132,6 +136,7 @@ MDB_CreateConst(const char* name) {
 }
 void MDB_stdcall
 MDB_SetDraftRoot(MDB_DRAFT draft, MDB_NODE node) {
+    if (g.badbit) return;
     log("MDB_SetDraftRoot(draft: %x, node: %x): ", (u32)draft, (u32)node);
     mdb_draft* d = (mdb_draft*)draft;
     mdb_node* n = (mdb_node*)node;
@@ -160,6 +165,7 @@ static s32 mdb_ValidLink(mdb_node* s, MDB_LINKDESC link, mdb_node* d) {
 
 void MDB_stdcall
 MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
+    if (g.badbit) return;
     log("MDB_AddLink(src: %x, link: %x, dst: %x): ",(u32)src,(u32)link,(u32)dst);
     mdb_node* s = (mdb_node*)src;
     mdb_node* d = (mdb_node*)dst;
@@ -177,6 +183,7 @@ MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
 
 void MDB_stdcall
 MDB_DiscardDraftNode(MDB_NODE node) {
+    if (!node) return;
     log("MDB_DiscardDraftNode(node: %x): ", (u32)node);
     mdb_node* n = (mdb_node*)node;
     mdb_draft* d = n->draft;
@@ -187,6 +194,7 @@ MDB_DiscardDraftNode(MDB_NODE node) {
 }
 void MDB_stdcall
 MDB_DiscardDraft(MDB_DRAFT draft) {
+    if (draft == 0) return;
     log("MDB_DiscardDraft(draft: %x): ", (u32)draft);
     mdb_draft* d = (mdb_draft*)draft;
     for (UP i = 0; i < d->n.s; i++)
@@ -198,6 +206,7 @@ MDB_DiscardDraft(MDB_DRAFT draft) {
 }
 void MDB_stdcall
 MDB_DiscardLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
+    if (!src || !dst) return;
     log("MDB_DiscardLink(src: %x, link: %x, dst: %x): ",(u32)src,(u32)link,(u32)dst);
     mdb_node* s = (mdb_node*)src;
     mdb_node* d = (mdb_node*)dst;
@@ -209,6 +218,7 @@ MDB_DiscardLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
 }
 int32_t MDB_stdcall
 MDB_CommitDraft(MDB_DRAFT draft) {
+    if (g.badbit) return 0;
     log("MDB_CommitDraft(draft: %x): ", (u32)draft);
     mdb_draft* d = (mdb_draft*)draft;
     assert(d->root);

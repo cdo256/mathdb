@@ -31,7 +31,7 @@ uintptr_t* MDB_stdcall MDB_GLookup(MDB_generic_map* map, uintptr_t n) {
     uintptr_t h = 0;
     MDB_generic_map* m = map;
     for (int i =0;i<PS;i++)
-        h=h*65599+((n>>(i*8))&255);
+        h=h*65599U+((n>>(i*8U))&255U);
     h%=m->s;
     uintptr_t* p = &m->a[h*2];
     uintptr_t* d = 0;

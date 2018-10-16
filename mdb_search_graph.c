@@ -7,14 +7,14 @@
 #include "mdb_create_node_map.h"
 #include "mdb_free_node_map.h"
 
-MDB_NODE getcapture(MDB_NODE n) {
+MDB_NODE GetCapture(MDB_NODE n) {
     if (MDB_Type(n) == MDB_FORM && MDB_ChildCount(n) >= 2) return MDB_Child(n,1);
     else return 0;
 }
 
 static s32 mdb_MatchPatternR(MDB_NODE pattern, MDB_NODE target, MDB_NODE capture, MDB_NODEMAP m) {
     if (target != pattern) {
-        if (getcapture(pattern) == capture) {
+        if (GetCapture(pattern) == capture) {
             MDB_WriteNodeMapEntry(m, pattern, target);
             return 1;
         }
