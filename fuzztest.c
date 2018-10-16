@@ -5,12 +5,14 @@
 #include <string.h>
 #include <assert.h>
 #include <time.h>
+#include <math.h>
 #include "mdb_manage.h"
 #include "mdb_edit_graph.h"
 #include "mdb_all_generic_map.h"
 #include "mdb_read_graph.h"
 #include "mdb_alloc_mem.h"
 #include "mdb_debug.h"
+#include "mdb_util.h"
 
 #define calloc MDB_CAlloc
 #define malloc MDB_Alloc
@@ -38,7 +40,7 @@ uintptr_t PickUniform(id_array* a, int zero) {
     UP j = 0;
     for (UP i = 0; i < a->s; i++)
         if (a->a[i]&&j++==r)return a->a[i];
-    fail();
+    assert(0);
     return 0;
 }
 
@@ -62,24 +64,22 @@ void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s3
     node_info* ni = (node_info*)k[1];
     draft_info* si = (draft_info*)MDB_GLookup(sm,ni->draft)[1];
     si->size--;
-    if (si->size==0)--*sNonEmpty;
+    if (si->size!=0)--*sNonEmpty;
     if (si->root==nd)*sNonEmptyUnrooted+=(si->size!=0),si->root=0;
-    else if (si->size==0) --*sNonEmptyUnrooted;
-    int notSat = 0;
+    else if (si->size!=0) --*sNonEmptyUnrooted;
+    UP notSat = 0;
     UP childCount = MDB_ChildCount(nd);
     if (childCount > 0) {
-        MDB_NODE* children = malloc(PS*childCount);
         for (UP i = 0; i < childCount; i++) {
-            if (!children[i]) {notSat = 1; continue;}
+            if (!MDB_Child(nd,i)) {notSat = 1; continue;}
             //TODO: do I need to have a special case for self-loops?
             // do I need to handle all cycles specially?
             UP dni = MDB_GLookup(nm,MDB_Child(nd,i))[1];
-            if (~dni && children[i] != nd && ((node_info*)dni)->rc--==1)
+            if (~dni && MDB_Child(nd,i) != nd && ((node_info*)dni)->rc--==1)
                 --*nUnreferenced;
         }
         si->nonSaturated -= notSat;
         assert(~si->nonSaturated);
-        free(children);
     }
     for (UP i = 0;i < n->s;i++)
         if (n->a[i] == nd) {
@@ -91,7 +91,7 @@ void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s3
 }
 
 void UniformRandomFuzz(void) {
-    int count = 0;
+    s32 count = 0;
     bool graphCreated = false;
     id_array nodeTypes = {3,3,calloc(3,PS)};
     memcpy(nodeTypes.a,(MDB_NODETYPE[]){MDB_FORM,MDB_POCKET,MDB_WORLD},3*PS);
@@ -103,8 +103,8 @@ void UniformRandomFuzz(void) {
     id_array s = {.c=0,.s=MAX_DRAFT,.a=calloc(MAX_DRAFT,PS)};
     id_array n = {.c=0,.s=MAX_NODE,.a=calloc(MAX_NODE,PS)};
     bool exit = false;
-    int steps = 0;
-    while (!exit && steps++ < 256) {
+    UP steps = 0;
+    while (!exit && steps++ < 4) {
         if (!graphCreated) {
             fprintf(stderr, "------------------\n fuzz: %d\n",++count);
             MDB_CreateGraph(),graphCreated = true;continue;}
@@ -218,7 +218,7 @@ void UniformRandomFuzz(void) {
                     ni->childBits |= (1U << ni->childEnd++);
                     ni->childCount++;
                 } else if (ni->childCount == 0) {
-                    UP i = rand()%(rand()%3 ? 1 : rand()%3 ? 2 :
+                    UP i = (UP)rand()%(rand()%3 ? 1 : rand()%3 ? 2 :
                         rand()%3 ? 4 : rand()%3 ? 8 : rand()%3 ? 16 : 32);
                     MDB_AddLink(src, i?MDB_ARG+i-1:MDB_APPLY, dst);
                     ni->childCount++;
@@ -227,7 +227,8 @@ void UniformRandomFuzz(void) {
                     if (ni->draft && i == 0) si->nonSaturated--;
                 } else {
                     UP i;
-                    do i = rand()%min(ni->childEnd+3,31);
+                    // a little past the end
+                    do i = (UP)rand()%MDB_Min(ni->childEnd+3,31);
                     while ((1U << i) & ni->childBits);
                     MDB_AddLink(src, i?MDB_ARG+i-1:MDB_APPLY, dst);
                     ni->childCount++;
@@ -330,18 +331,18 @@ void UniformRandomFuzz(void) {
 #if 1
 int main(void) {
     //MDB_InitDebug();
-    int seed = 477526;//(int)time(NULL);
+    u32 seed = 477526;//(int)time(NULL);
     srand(seed);
-    seed = rand() ^ (rand() << 16);
-    seed =  182209459;
-    do {
-        srand(seed);
+    seed = (u32)rand() ^ ((u32)rand() << 16U);
+    seed =  182574442;
+    for (int i = 0 ;i<100;i++) {
+        srand((int)seed);
         //s32 allocations = MDB_GetAllocatedBlockCount();
-    printf("testing with seed %d.\n", seed);
-    UniformRandomFuzz();
-    //assert(allocations == MDB_GetAllocatedBlockCount() );
-    printf("done\n");
-    seed++;
-    } while(1);
+        fprintf(stderr, "testing with seed %d.\n", seed);
+        UniformRandomFuzz();
+        //assert(allocations == MDB_GetAllocatedBlockCount() );
+        fprintf(stderr,"done\n");
+        seed++;
+    }
 }
 #endif

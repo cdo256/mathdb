@@ -20,6 +20,7 @@
       <w>linkdesc</w>
       <w>nodetype</w>
       <w>realloc</w>
+      <w>unrooted</w>
     </words>
   </dictionary>
 </component>

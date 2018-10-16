@@ -1,11 +1,11 @@
 ifeq ($(OS),Windows_NT)
 	CC = cl
 	EXT = .exe
-	PLATOPT += -Fetest.exe
+	PLATOPT += -Wall -Fetest.exe
 else
 	CC = gcc
-	EXT = 
-	PLATOPT += -Wextra -g -otest
+	EXT =
+	PLATOPT += -Wall -Wextra -g -otest
 endif
-test$(ext): $(wildcard ../../../*.c ../../../*.h makefile)
-	$(CC) -Wall $(PLATOPT) ../../../*.c
+test$(ext): $(wildcard *.c *.h makefile)
+	$(CC) -Wall $(PLATOPT) *.c

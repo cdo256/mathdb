@@ -388,7 +388,7 @@ int Test(int i, int fn, char const** name) {
             sfree(s);
             gfree();
             return PASS;
-        } break;
+        }
         case 14: {*name = "creating node after discarding draft";
             if (fn == NAME) return -1;
             g();
@@ -401,7 +401,7 @@ int Test(int i, int fn, char const** name) {
             con("d");
             gfree();
             return PASS;
-        } break;
+        }
         case 15: {*name = "trigger error on linking two drafts (simple)";
             if (fn == NAME) return -1;
             MDB_CreateGraph();
@@ -415,42 +415,42 @@ int Test(int i, int fn, char const** name) {
             check(!MDB_GetError(&e,0));
             MDB_FreeGraph();
             return PASS;
-        } break;
+        }
         case 16: {*name = "trigger error on linking two draftss (complex)";
             if (fn == NAME) return -1;
             MDB_CreateGraph();
-            ND n1,n2,n3,n4,n5;
+            ND n2,n3,n4;
             SK s1,s2,s3;
             s1 = MDB_StartDraft();
-            n1 = MDB_CreateConst("a");
+            MDB_CreateConst("a");
             n2=MDB_DraftNode(s1, MDB_FORM);
             s2=MDB_StartDraft();
             n3=MDB_DraftNode(s2, MDB_FORM);
             MDB_AddLink(n2, MDB_APPLY, n3);
-            n4=MDB_DraftNode(s1, MDB_POCKET);
+            MDB_DraftNode(s1, MDB_POCKET);
             s3=MDB_StartDraft();
-            n5=MDB_CreateConst("b");
+            MDB_CreateConst("b");
             MDB_DiscardDraft(s1);
             MDB_DiscardDraft(s3);
             n4=MDB_DraftNode(s2, MDB_POCKET);
-            n5=MDB_DraftNode(s2, MDB_WORLD);
+            MDB_DraftNode(s2, MDB_WORLD);
             MDB_DiscardDraftNode(n4);
             MDB_FreeGraph();
             return PASS;
-        } break;
+        }
         case 17: {*name = "discard root node";
             if (fn==NAME) return -1;
-            ND n1,n2;
+            ND n1;
             SK s;
             MDB_CreateGraph();
             s = MDB_StartDraft();
             n1 = MDB_DraftNode(s, MDB_WORLD);
             MDB_SetDraftRoot(s, n1);
-            n2 = MDB_DraftNode(s, MDB_WORLD);
+            MDB_DraftNode(s, MDB_WORLD);
             MDB_DiscardDraftNode(n1);
             MDB_FreeGraph();
             return PASS;
-        } break;
+        }
         default: {
             if (fn == COUNT) return 18;
             fprintf(stderr, "\nInvalid test id.\n");
@@ -460,7 +460,7 @@ int Test(int i, int fn, char const** name) {
 
 // returns 1 iff the test succeeded
 int RunTest(int id) {
-    char* s;
+    char const* s;
     Test(id,NAME,&s);
     printf("Test %d (%s): ", id, s);
     UP startAllocCount = MDB_GetAllocatedBlockCount();

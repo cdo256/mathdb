@@ -2,8 +2,8 @@
 #include "mdb_base.h"
 typedef uintptr_t MDB_NODE;
 typedef uintptr_t MDB_DRAFT;
-typedef int MDB_NODETYPE;
-typedef int MDB_LINKDESC;
+typedef uintptr_t MDB_NODETYPE;
+typedef uintptr_t MDB_LINKDESC;
 #define MDB_WORLD 0x0001UL
 #define MDB_CONST 0x0002UL
 #define MDB_FORM 0x0003UL

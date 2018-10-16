@@ -43,9 +43,28 @@ void MDB_stdcall MDB_CreateGraph(void) {
     };
     log("done\n");
 }
+
+static void mdb_FreeNode(mdb_node* n) {
+    if (n) {
+        verify(~MDB_MSetRemove(&g.nodes, (UP)n));
+        assert(!~MDB_MSetContains(&g.nodes, (UP)n));
+        MDB_FreeVector(&n->out);
+        MDB_FreeMSet(&n->in);
+        free(n->name);
+        free(n);
+    }
+}
+
 void MDB_stdcall MDB_FreeGraph(void) {
     log("MDB_FreeGraph(): ");
     g.init = 0;
+    // go backwards since removing from the end doesn't affect the other elems
+    for (UP i = g.nodes.s-1; ~i; i--) mdb_FreeNode((mdb_node*)g.nodes.a[i]);
+    for (UP i = g.drafts.s-1; ~i; i--) {
+        mdb_draft* d = (mdb_draft*)g.drafts.a[i];
+        MDB_FreeMSet(&d->n);
+        free(d);
+    }
     MDB_FreeMSet(&g.nodes);
     MDB_FreeMSet(&g.drafts);
     log("done\n");
@@ -61,7 +80,7 @@ MDB_StartDraft(void) {
     };
     MDB_DRAFT draft = (UP)d;
     if (~MDB_MSetAdd(&g.drafts, draft)) {
-        log("%x\n", draft);
+        log("%x\n", (u32)draft);
         return draft;
     }
     g.badbit = 1;
@@ -69,7 +88,7 @@ MDB_StartDraft(void) {
 }
 MDB_NODE MDB_stdcall
 MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
-    log("MDB_DraftNode(draft: %x, type: %x): ", draft, type);
+    log("MDB_DraftNode(draft: %x, type: %x): ", (u32)draft, (u32)type);
     mdb_draft* d = (mdb_draft*)draft;
     mdb_node* n = malloc(sizeof(mdb_node));
     if (!n) {g.badbit = 1; return 0;}
@@ -81,7 +100,7 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
     MDB_NODE node = (MDB_NODE)n;
     if (~MDB_MSetAdd(&d->n, node)) {
         if (~MDB_MSetAdd(&g.nodes, node)) {
-            log("%x\n",node);
+            log("%x\n",(u32)node);
             return node;
         }
         MDB_MSetRemove(&d->n, node);
@@ -100,9 +119,11 @@ MDB_CreateConst(const char* name) {
         .type = MDB_CONST,
         .name = malloc(len),
     };
+    if (!n->name) {free(n); g.badbit = 1; return 0;}
+    strcpy(n->name, name);
     MDB_NODE node = (MDB_NODE)n;
     if (~MDB_MSetAdd(&g.nodes, node)) {
-        log("%x\n",node);
+        log("%x\n",(u32)node);
         return node;
     }
     g.badbit = 1;
@@ -111,7 +132,7 @@ MDB_CreateConst(const char* name) {
 }
 void MDB_stdcall
 MDB_SetDraftRoot(MDB_DRAFT draft, MDB_NODE node) {
-    log("MDB_SetDraftRoot(draft: %x, node: %x): ", draft, node);
+    log("MDB_SetDraftRoot(draft: %x, node: %x): ", (u32)draft, (u32)node);
     mdb_draft* d = (mdb_draft*)draft;
     mdb_node* n = (mdb_node*)node;
     assert(~MDB_MSetContains(&d->n,node));
@@ -123,14 +144,14 @@ static UP mdb_LinkToIndex(UP end, MDB_LINKDESC link) {
     if (link & MDB_ARG) return (link | ~MDB_ARG)+1;
     if (link == MDB_APPLY) return 0;
     if (link == MDB_ELEM) return end;
-    fail();
+    assert(0);
     return ~0ULL;
 }
 
 // a world elem may link anywhere
 // otherwise, s must be in a draft and d is not in a different draft
 static s32 mdb_ValidLink(mdb_node* s, MDB_LINKDESC link, mdb_node* d) {
-    if (s->draft && (!d->draft || d->draft == s->draft) || s->type == MDB_WORLD && link == MDB_ELEM) {
+    if ((s->draft && (!d->draft || d->draft == s->draft)) || (s->type == MDB_WORLD && link == MDB_ELEM)) {
         if (link & MDB_ARG || link == MDB_APPLY) return (s->type == MDB_FORM);
         else if (link == MDB_ELEM) return (s->type == MDB_WORLD || s->type == MDB_POCKET);
         return 1;
@@ -139,11 +160,11 @@ static s32 mdb_ValidLink(mdb_node* s, MDB_LINKDESC link, mdb_node* d) {
 
 void MDB_stdcall
 MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
-    log("MDB_AddLink(src: %x, link: %x, dst: %x): ",src,link,dst);
+    log("MDB_AddLink(src: %x, link: %x, dst: %x): ",(u32)src,(u32)link,(u32)dst);
     mdb_node* s = (mdb_node*)src;
     mdb_node* d = (mdb_node*)dst;
     assert(mdb_ValidLink(s,link,d));
-    UP idx = mdb_LinkToIndex(s->out.c, link);
+    UP idx = mdb_LinkToIndex(s->out.s, link);
     if (s->draft || ~MDB_MSetAdd(&d->in, src)) {
         if (~MDB_GrowVector(&s->out, idx+1, 0ULL)) {
             s->out.a[idx] = dst;
@@ -153,14 +174,10 @@ MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     }
     g.badbit = 1;
 }
-void mdb_FreeNode(mdb_node* n) {
-    MDB_FreeVector(&n->out);
-    MDB_FreeMSet(&n->in);
-    free(n);
-}
+
 void MDB_stdcall
 MDB_DiscardDraftNode(MDB_NODE node) {
-    log("MDB_DiscardDraftNode(node: %x): ", node);
+    log("MDB_DiscardDraftNode(node: %x): ", (u32)node);
     mdb_node* n = (mdb_node*)node;
     mdb_draft* d = n->draft;
     verify(~MDB_MSetRemove(&d->n, node));
@@ -170,35 +187,36 @@ MDB_DiscardDraftNode(MDB_NODE node) {
 }
 void MDB_stdcall
 MDB_DiscardDraft(MDB_DRAFT draft) {
-    log("MDB_DiscardDraft(draft: %x): ", draft);
+    log("MDB_DiscardDraft(draft: %x): ", (u32)draft);
     mdb_draft* d = (mdb_draft*)draft;
-    for (UP i = 0; i < d->n.c; i++)
+    for (UP i = 0; i < d->n.s; i++)
         mdb_FreeNode((mdb_node*)d->n.a[i]);
     MDB_FreeMSet(&d->n);
     free(d);
+    MDB_MSetRemove(&g.drafts,draft);
     log("done\n");
 }
 void MDB_stdcall
 MDB_DiscardLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
-    log("MDB_DiscardLink(src: %x, link: %x, dst: %x): ",src,link,dst);
+    log("MDB_DiscardLink(src: %x, link: %x, dst: %x): ",(u32)src,(u32)link,(u32)dst);
     mdb_node* s = (mdb_node*)src;
     mdb_node* d = (mdb_node*)dst;
     assert(mdb_ValidLink(s,link,d));
-    UP idx = mdb_LinkToIndex(s->out.c, link);
+    UP idx = mdb_LinkToIndex(s->out.s, link);
     s->out.a[idx] = 0;
     verify(~MDB_MSetRemove(&d->in, src));
     log("done\n");
 }
 int32_t MDB_stdcall
 MDB_CommitDraft(MDB_DRAFT draft) {
-    log("MDB_CommitDraft(draft: %x): ", draft);
+    log("MDB_CommitDraft(draft: %x): ", (u32)draft);
     mdb_draft* d = (mdb_draft*)draft;
     assert(d->root);
-    for (UP i = 0; i < d->n.c; i++) {
+    for (UP i = 0; i < d->n.s; i++) {
         mdb_node* n = (mdb_node*)d->n.a[i];
         assert(n->draft == d);
         n->draft = 0;
-        for (UP j = 0; j < n->out.c; j++) {
+        for (UP j = 0; j < n->out.s; j++) {
             mdb_node* c = (mdb_node*)n->out.a[j];
             if (!c) {log("0\n");return 0;} // gap
             verify(~MDB_MSetAdd(&c->in, (UP)n));
@@ -214,13 +232,13 @@ MDB_NODETYPE MDB_stdcall MDB_Type(MDB_NODE node) {
     return ((mdb_node*)node)->type;
 }
 uintptr_t MDB_stdcall MDB_ChildCount(MDB_NODE node) {
-    return ((mdb_node*)node)->out.c;
+    return ((mdb_node*)node)->out.s;
 }
 char const* MDB_stdcall MDB_NodeName(MDB_NODE node) {
     return ((mdb_node*)node)->name;
 }
 uintptr_t MDB_stdcall MDB_Child(MDB_NODE node, uintptr_t idx) {
-    assert(idx < ((mdb_node*)node)->out.c);
+    assert(idx < ((mdb_node*)node)->out.s);
     return ((mdb_node*)node)->out.a[idx];
 }
 

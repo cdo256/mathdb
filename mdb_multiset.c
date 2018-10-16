@@ -16,7 +16,7 @@ UP MDB_MSetAdd(MDB_mset* s, UP x) {
         s->a = a; s->c = c;
     }
     s->a[s->s++]=x;
-    return s->c-1;
+    return s->s-1;
 }
 // remove last occurance only, returns index x used to occupy or ~0U if not found
 UP MDB_MSetRemove(MDB_mset* s, UP x) {

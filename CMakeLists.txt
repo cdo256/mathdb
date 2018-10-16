@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
 project(mathdb)
 file(GLOB src "*.h" "*.c")
+SET(GCC_COVERAGE_COMPILE_FLAGS "-Wall -Wextra -Werror")
 add_executable(test ${src})

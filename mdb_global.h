@@ -1,3 +1,5 @@
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCSimplifyInspection"
 #pragma once
 #include "mdb_base.h"
 
@@ -17,9 +19,8 @@
 #if DEBUG
 #define verify(x) assert(x)
 #else
-#define verify(x) ((void)x)
+#define verify(x) ((void)(x))
 #endif
-#define fail() assert(0)
 
 typedef uint64_t u64;
 typedef uint32_t u32;
@@ -44,7 +45,7 @@ typedef uintptr_t UP; // Used basically everywhere
 #endif
 
 static_assert(PS == sizeof(void*), UNSUPPORTED "unexpected data pointer size");
-static_assert(PS == sizeof(char*) && PS == sizeof(long long*),
+static_assert(sizeof(char*) == sizeof(long long*) && sizeof(char*) == sizeof(void*),
     UNSUPPORTED "inconsistent data pointer sizes");
 static_assert((uintptr_t)NULL == 0, UNSUPPORTED "non-zero null");
 
@@ -53,3 +54,5 @@ static_assert((uintptr_t)NULL == 0, UNSUPPORTED "non-zero null");
 #pragma warning(disable:4710) // Ignore 'funciton not inlined' since it's triggered by the likes of printf
 #pragma warning(disable:4204) // Non-constant initializer is now in C99
 #endif
+
+#pragma clang diagnostic pop
