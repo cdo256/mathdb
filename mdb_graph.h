@@ -1,7 +1,7 @@
 #pragma once
 #include "mdb_base.h"
-typedef uintptr_t MDB_NODE;
-typedef uintptr_t MDB_DRAFT;
+typedef struct mdb_node* MDB_NODE;
+typedef struct mdb_draft* MDB_DRAFT;
 typedef uintptr_t MDB_NODETYPE;
 typedef uintptr_t MDB_LINKDESC;
 #define MDB_WORLD 0x0001UL
@@ -9,7 +9,6 @@ typedef uintptr_t MDB_LINKDESC;
 #define MDB_FORM 0x0003UL
 #define MDB_POCKET 0x0004UL
 
-#define MDB_INVALIDNODETYPE 0x0000UL
 #define MDB_APPLY 0x0001UL
 #define MDB_ARG 0x1000UL
 #define MDB_ARG0 0x1000UL

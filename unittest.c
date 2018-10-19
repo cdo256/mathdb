@@ -2,7 +2,12 @@
 #include "mdb_manage.h"
 #include "mdb_get_error.h"
 #include "mdb_search_graph.h"
+#include "mdb_edit_graph.h"
+#include "mdb_read_graph.h"
+#include "mdb_get_mem_info.h"
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #define PASS 1
 #define FAIL 0
 
