@@ -1,4 +1,4 @@
-#include <stdlib.h>
+
 #include "mdb_global.h"
 #include "mdb_all_multiset.h" //IMPLEMENTS
 #define check_inv(ms) assert((ms)->s <= (ms)->c)
@@ -13,7 +13,7 @@ UP MDB_MSetRemove(MDB_mset* s, VAL x) {
     check_inv(s);
     s->s--;
     for (UP i = s->s; ~i; i--) {
-        if (s->a[i]==x) {
+        if (s->a[i] == x) {
             s->a[i] = s->a[s->s];
             return i;
         }
