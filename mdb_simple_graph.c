@@ -1,13 +1,8 @@
 #include "mdb_global.h"
 #if 1
 #include "mdb_graph.h" //IMPLEMENTS
-#include "mdb_manage.h" //IMPLEMENTS
 #include "mdb_all_multiset.h"
 #include "mdb_all_vector.h"
-#include "mdb_error.h"
-#include "mdb_get_error.h" //IMPLEMENTS
-#include <stdlib.h>
-#include <string.h>
 #include <stdio.h>
 
 #define log(...) fprintf(stderr, __VA_ARGS__)
@@ -146,7 +141,7 @@ MDB_SetDraftRoot(MDB_DRAFT draft, MDB_NODE node) {
 }
 
 static UP mdb_LinkToIndex(UP end, MDB_LINKDESC link) {
-    if (link & MDB_ARG) return (link | ~MDB_ARG)+1;
+    if (link & MDB_ARG) return (link & ~MDB_ARG) + 1;
     if (link == MDB_APPLY) return 0;
     if (link == MDB_ELEM) return end;
     assert(0);
@@ -173,7 +168,9 @@ MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     UP idx = mdb_LinkToIndex(s->out.s, link);
     if (s->draft || ~MDB_MSetAdd(&d->in, src)) {
         if (~MDB_GrowVector(&s->out, idx+1, 0ULL)) {
+            assert(!s->out.a[idx]);
             s->out.a[idx] = dst;
+            s->out.s++;
             log("done\n");
             return;
         } else if (!s->draft) MDB_MSetRemove(&d->in, src);
