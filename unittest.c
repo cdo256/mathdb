@@ -1,31 +1,15 @@
 #include "mdb_global.h"
 #include "mdb_manage.h"
-#include "mdb_edit_graph.h"
 #include "mdb_get_error.h"
-#include "mdb_read_graph.h"
-#include "mdb_debug.h"
-#include "mdb_get_mem_info.h"
 #include "mdb_search_graph.h"
-#include "mdb_read_node_map.h"
-#include "mdb_free_node_map.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <inttypes.h>
-
 #define PASS 1
 #define FAIL 0
 
 #define NAME 0
 #define RUN 1
 #define COUNT 2
-
-void MDB_DebugBreak2(void) {}
-#define debug MDB_DebugBreak2
-
-#define check(x) if (!(x)) debug()
-//#define check(x) do if (!(x)) { assert(0); return FAIL; } while(0)
+#define check(x) assert(x)
 
 #define ND MDB_NODE
 #define NM MDB_NODEMAP
@@ -324,7 +308,8 @@ int Test(int i, int fn, char const** name) {
             MDB_FreeGraph();
             return PASS;
         }
-        case 11: { *name = "simple formation match";
+    case 11: *name = "simple formation match";
+        {
             if (fn == NAME) return -1;
             g();
             SK s = draft();
@@ -348,7 +333,8 @@ int Test(int i, int fn, char const** name) {
             gfree();
             return PASS;
         }
-        case 12: {*name = "simple pattern search";
+    case 12: *name = "simple pattern search";
+        {
             if (fn == NAME) return -1;
             g();
             SK s = draft();
@@ -380,7 +366,8 @@ int Test(int i, int fn, char const** name) {
             gfree();
             return PASS;
         }
-        case 13: {*name = "discard non-empty draft";
+    case 13: *name = "discard non-empty draft";
+        {
             if (fn == NAME) return -1;
             g();
             SK s = draft();
@@ -389,7 +376,8 @@ int Test(int i, int fn, char const** name) {
             gfree();
             return PASS;
         }
-        case 14: {*name = "creating node after discarding draft";
+    case 14: *name = "creating node after discarding draft";
+        {
             if (fn == NAME) return -1;
             g();
             con("a");
@@ -402,7 +390,8 @@ int Test(int i, int fn, char const** name) {
             gfree();
             return PASS;
         }
-        case 15: {*name = "trigger error on linking two drafts (simple)";
+    case 15: *name = "trigger error on linking two drafts (simple)";
+        {
             if (fn == NAME) return -1;
             MDB_CreateGraph();
             SK s1 = MDB_StartDraft();
@@ -416,7 +405,8 @@ int Test(int i, int fn, char const** name) {
             MDB_FreeGraph();
             return PASS;
         }
-        case 16: {*name = "trigger error on linking two drafts (complex)";
+    case 16: *name = "trigger error on linking two drafts (complex)";
+        {
             if (fn == NAME) return -1;
             MDB_CreateGraph();
             ND n2,n3,n4;
@@ -438,7 +428,8 @@ int Test(int i, int fn, char const** name) {
             MDB_FreeGraph();
             return PASS;
         }
-        case 17: {*name = "discard root node";
+    case 17: *name = "discard root node";
+        {
             if (fn==NAME) return -1;
             ND n1;
             SK s;
@@ -459,47 +450,39 @@ int Test(int i, int fn, char const** name) {
 }
 
 // returns 1 iff the test succeeded
-int RunTest(int id) {
+int RunUnitTest(int id) {
     char const* s;
     Test(id,NAME,&s);
-    printf("Test %d (%s): ", id, s);
+    fprintf(stderr, "Test %d (%s): ", id, s);
     UP startAllocCount = MDB_GetAllocatedBlockCount();
     int result = Test(id,RUN,&s);
     if (startAllocCount != MDB_GetAllocatedBlockCount()) result = FAIL;
-    //printf("total allocation: %"PRIu64" blocks\n", MDB_GetAllocatedBlockCount());
     MDB_error e;
     if (MDB_GetError(&e,1)) result = FAIL;
     while (MDB_GetError(&e,1)); // Clear errors
-    printf("%s\n", result ? "passed" : "FAILED");
+    fprintf(stderr, "%s\n", result ? "passed" : "FAILED");
     return result;
 }
 
-#if 0
 int main(int argc, char const* const* argv) {
-    MDB_InitDebug();
     int failCount = 0;
-    char* s;
+    char const* s;
     int testCount = Test(-1,COUNT,&s);
     if (argc > 1) { // args are a list of test numbers
         testCount = argc-1;
         for (int i = 1; i < argc; i++) {
-            int id;
-            sscanf_s(argv[i], "%d", &id);
-            failCount += !RunTest(id);
+            int id = (int)strtol(argv[i], 0, 0);
+            failCount += !RunUnitTest(id);
         }
     } else { // if no args supplied run all tests
         for (int i = 0; i < testCount; i++) {
-            failCount += !RunTest(i);
+            failCount += !RunUnitTest(i);
         }
     }
     if (testCount > 1) { // only print a summary if we ran multiple tests
         if (failCount == 0)
-            printf("All tests passed");
-        else printf("*** %d/%d TESTS FAILED ***",failCount,testCount);
-        printf("\n");
+            fprintf(stderr, "All tests passed");
+        else fprintf(stderr, "*** %d/%d TESTS FAILED ***", failCount, testCount);
+        fprintf(stderr, "\n");
     }
-#ifdef _WIN32
-    system("pause");
-#endif
 }
-#endif

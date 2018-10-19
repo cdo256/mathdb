@@ -1,19 +1,7 @@
 #include "mdb_global.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <assert.h>
-#include <time.h>
-#include <math.h>
 #include "mdb_manage.h"
-#include "mdb_edit_graph.h"
 #include "mdb_all_generic_map.h"
-#include "mdb_read_graph.h"
-#include "mdb_alloc_mem.h"
-#include "mdb_debug.h"
-#include "mdb_util.h"
-
 #define calloc MDB_CAlloc
 #define malloc MDB_Alloc
 #define free MDB_Free
@@ -328,8 +316,7 @@ void UniformRandomFuzz(void) {
     MDB_FreeGMap(sm);
     MDB_FreeGMap(nm);
 }
-
-#if 1
+#if 0
 int main(void) {
     //MDB_InitDebug();
     u32 seed = 477526;//(int)time(NULL);
