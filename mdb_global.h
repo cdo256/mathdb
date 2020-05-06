@@ -1,5 +1,3 @@
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCSimplifyInspection"
 #pragma once
 #include "mdb_base.h"
 
@@ -35,12 +33,9 @@
 static_assert(PS == sizeof(void*), UNSUPPORTED "unexpected data pointer size");
 static_assert(sizeof(char*) == sizeof(long long*) && sizeof(char*) == sizeof(void*),
     UNSUPPORTED "inconsistent data pointer sizes");
-static_assert((uintptr_t)NULL == 0, UNSUPPORTED "non-zero null");
 
 #ifdef _MSC_VER
 #pragma warning(disable:4820) // Ignore struct size since I want it to work on both 64-bit and 32-bit arch
 #pragma warning(disable:4710) // Ignore 'funciton not inlined' since it's triggered by the likes of printf
 #pragma warning(disable:4204) // Non-constant initializer is now in C99
 #endif
-
-#pragma clang diagnostic pop

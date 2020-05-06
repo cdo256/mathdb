@@ -17,4 +17,7 @@ typedef uintptr_t MDB_LINKDESC;
 #define MDB_ARG3 0x1003UL
 #define MDB_ARG4 0x1004UL
 #define MDB_ARG5 0x1005UL
+#define MDB_ARG6 0x1006UL
+#define MDB_ARG7 0x1007UL
+#define MDB_ARG8 0x1008UL
 #define MDB_ELEM 0x0002UL

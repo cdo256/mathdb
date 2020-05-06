@@ -5,6 +5,8 @@
 #include "mdb_edit_graph.h"
 #include "mdb_read_graph.h"
 #include "mdb_get_mem_info.h"
+#include "mdb_free_node_map.h"
+#include "mdb_use_node_map.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -20,76 +22,87 @@
 #define NM MDB_NODEMAP
 #define SK MDB_DRAFT
 
-ND A9(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6,ND a7,ND a8) {
+ND A9(SK, ND, ND, ND, ND, ND, ND, ND, ND, ND, ND);
+ND A8(SK, ND, ND, ND, ND, ND, ND, ND, ND, ND);
+ND A7(SK, ND, ND, ND, ND, ND, ND, ND, ND);
+ND A6(SK, ND, ND, ND, ND, ND, ND, ND);
+ND A5(SK, ND, ND, ND, ND, ND, ND);
+ND A4(SK, ND, ND, ND, ND, ND);
+ND A3(SK, ND, ND, ND, ND);
+ND A2(SK, ND, ND, ND);
+ND A1(SK, ND, ND);
+ND A0(SK, ND);
+
+ND A9(SK s, ND o, ND a0, ND a1, ND a2, ND a3, ND a4, ND a5, ND a6, ND a7, ND a8) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
-    MDB_AddLink(n, MDB_ARG0, a1);
-    MDB_AddLink(n, MDB_ARG0, a2);
-    MDB_AddLink(n, MDB_ARG0, a3);
-    MDB_AddLink(n, MDB_ARG0, a4);
-    MDB_AddLink(n, MDB_ARG0, a5);
-    MDB_AddLink(n, MDB_ARG0, a6);
-    MDB_AddLink(n, MDB_ARG0, a7);
-    MDB_AddLink(n, MDB_ARG0, a8);
+    MDB_AddLink(n, MDB_ARG1, a1);
+    MDB_AddLink(n, MDB_ARG2, a2);
+    MDB_AddLink(n, MDB_ARG3, a3);
+    MDB_AddLink(n, MDB_ARG4, a4);
+    MDB_AddLink(n, MDB_ARG5, a5);
+    MDB_AddLink(n, MDB_ARG6, a6);
+    MDB_AddLink(n, MDB_ARG7, a7);
+    MDB_AddLink(n, MDB_ARG8, a8);
     return n;
 }
-ND A8(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6,ND a7) {
+ND A8(SK s, ND o, ND a0, ND a1, ND a2, ND a3, ND a4, ND a5, ND a6, ND a7) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
-    MDB_AddLink(n, MDB_ARG0, a1);
-    MDB_AddLink(n, MDB_ARG0, a2);
-    MDB_AddLink(n, MDB_ARG0, a3);
-    MDB_AddLink(n, MDB_ARG0, a4);
-    MDB_AddLink(n, MDB_ARG0, a5);
-    MDB_AddLink(n, MDB_ARG0, a6);
-    MDB_AddLink(n, MDB_ARG0, a7);
+    MDB_AddLink(n, MDB_ARG1, a1);
+    MDB_AddLink(n, MDB_ARG2, a2);
+    MDB_AddLink(n, MDB_ARG3, a3);
+    MDB_AddLink(n, MDB_ARG4, a4);
+    MDB_AddLink(n, MDB_ARG5, a5);
+    MDB_AddLink(n, MDB_ARG6, a6);
+    MDB_AddLink(n, MDB_ARG7, a7);
     return n;
 }
-ND A7(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5,ND a6) {
+ND A7(SK s, ND o, ND a0, ND a1, ND a2, ND a3, ND a4, ND a5, ND a6) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
-    MDB_AddLink(n, MDB_ARG0, a1);
-    MDB_AddLink(n, MDB_ARG0, a2);
-    MDB_AddLink(n, MDB_ARG0, a3);
-    MDB_AddLink(n, MDB_ARG0, a4);
-    MDB_AddLink(n, MDB_ARG0, a5);
-    MDB_AddLink(n, MDB_ARG0, a6);
+    MDB_AddLink(n, MDB_ARG1, a1);
+    MDB_AddLink(n, MDB_ARG2, a2);
+    MDB_AddLink(n, MDB_ARG3, a3);
+    MDB_AddLink(n, MDB_ARG4, a4);
+    MDB_AddLink(n, MDB_ARG5, a5);
+    MDB_AddLink(n, MDB_ARG6, a6);
     return n;
 }
-ND A6(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4,ND a5) {
+ND A6(SK s, ND o, ND a0, ND a1, ND a2, ND a3, ND a4, ND a5) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
-    MDB_AddLink(n, MDB_ARG0, a1);
-    MDB_AddLink(n, MDB_ARG0, a2);
-    MDB_AddLink(n, MDB_ARG0, a3);
-    MDB_AddLink(n, MDB_ARG0, a4);
-    MDB_AddLink(n, MDB_ARG0, a5);
+    MDB_AddLink(n, MDB_ARG1, a1);
+    MDB_AddLink(n, MDB_ARG2, a2);
+    MDB_AddLink(n, MDB_ARG3, a3);
+    MDB_AddLink(n, MDB_ARG4, a4);
+    MDB_AddLink(n, MDB_ARG5, a5);
     return n;
 }
-ND A5(SK s, ND o, ND a0,ND a1,ND a2,ND a3,ND a4) {
+ND A5(SK s, ND o, ND a0, ND a1, ND a2, ND a3, ND a4) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
-    MDB_AddLink(n, MDB_ARG0, a1);
-    MDB_AddLink(n, MDB_ARG0, a2);
-    MDB_AddLink(n, MDB_ARG0, a3);
-    MDB_AddLink(n, MDB_ARG0, a4);
+    MDB_AddLink(n, MDB_ARG1, a1);
+    MDB_AddLink(n, MDB_ARG2, a2);
+    MDB_AddLink(n, MDB_ARG3, a3);
+    MDB_AddLink(n, MDB_ARG4, a4);
     return n;
 }
-ND A4(SK s, ND o, ND a0,ND a1,ND a2,ND a3) {
+ND A4(SK s, ND o, ND a0, ND a1, ND a2, ND a3) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
-    MDB_AddLink(n, MDB_ARG0, a1);
-    MDB_AddLink(n, MDB_ARG0, a2);
-    MDB_AddLink(n, MDB_ARG0, a3);
+    MDB_AddLink(n, MDB_ARG1, a1);
+    MDB_AddLink(n, MDB_ARG2, a2);
+    MDB_AddLink(n, MDB_ARG3, a3);
     return n;
 }
-ND A3(SK s, ND o, ND a0,ND a1,ND a2) {
+ND A3(SK s, ND o, ND a0, ND a1, ND a2) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
@@ -97,7 +110,7 @@ ND A3(SK s, ND o, ND a0,ND a1,ND a2) {
     MDB_AddLink(n, MDB_ARG2, a2);
     return n;
 }
-ND A2(SK s, ND o, ND a0,ND a1) {
+ND A2(SK s, ND o, ND a0, ND a1) {
     ND n = MDB_DraftNode(s, MDB_FORM);
     MDB_AddLink(n, MDB_APPLY, o);
     MDB_AddLink(n, MDB_ARG0, a0);
@@ -122,6 +135,9 @@ ND A1(SK s, ND o, ND a0) {
 #define node MDB_DraftNode
 #define link MDB_AddLink
 #define lookup MDB_MapNode
+
+int Test(int i, int fn, char const** name);
+int RunUnitTest(int id);
 
 int Test(int i, int fn, char const** name) {
     switch (i) {
@@ -231,7 +247,7 @@ int Test(int i, int fn, char const** name) {
             MDB_NODE n1 = MDB_DraftNode(s, MDB_WORLD);
             MDB_NODE n2 = MDB_DraftNode(s, MDB_FORM);
             MDB_SetDraftRoot(s, n1);
-            MDB_DiscardDraftNode(s);
+            MDB_DiscardDraftNode(n1);
             MDB_NODE n3 = MDB_DraftNode(s, MDB_POCKET);
             MDB_SetDraftRoot(s, n3);
             MDB_CommitDraft(s);
@@ -278,7 +294,7 @@ int Test(int i, int fn, char const** name) {
             MDB_NODE n1 = MDB_DraftNode(s, MDB_WORLD);
             MDB_DraftNode(s, MDB_FORM);
             MDB_SetDraftRoot(s, n1);
-            MDB_DiscardDraftNode(s);
+            MDB_DiscardDraftNode(n1);
             MDB_NODE n3 = MDB_DraftNode(s, MDB_POCKET);
             MDB_SetDraftRoot(s, n3);
             MDB_CommitDraft(s);
@@ -292,7 +308,7 @@ int Test(int i, int fn, char const** name) {
             MDB_NODE n1 = MDB_DraftNode(s, MDB_WORLD);
             MDB_DraftNode(s, MDB_FORM);
             MDB_SetDraftRoot(s, n1);
-            MDB_DiscardDraftNode(s);
+            MDB_DiscardDraftNode(n1);
             MDB_NODE n3 = MDB_DraftNode(s, MDB_POCKET);
             MDB_SetDraftRoot(s, n3);
             MDB_CommitDraft(s);

@@ -1,6 +1,5 @@
 CFLAGS = -Wall -Werror -Wextra -pedantic \
-	-Wshadow -Woverloaded-virtual \
-	-Winvalid-pch -Wcast-align -Wformat=2 \
+	-Wshadow -Winvalid-pch -Wcast-align -Wformat=2 \
 	-Wformat-nonliteral -Wmissing-declarations \
 	-Wmissing-format-attribute \
 	-Wmissing-include-dirs -Wredundant-decls \
