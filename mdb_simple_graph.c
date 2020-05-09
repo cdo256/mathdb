@@ -234,6 +234,7 @@ MDB_CommitDraft(MDB_DRAFT draft) {
     }
     MDB_FreeMSet(&d->n);
     MDB_Free(d);
+    MDB_MSetRemove(&g.drafts,draft);
     log("1\n");
     return 1;
 }
