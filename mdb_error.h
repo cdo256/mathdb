@@ -19,6 +19,7 @@ typedef struct MDB_error {
 #define MDB_EINCOMPLETEDRAFTBIT 0x0005U
 #define MDB_EINTOVERFLOWBIT     0x0006U
 #define MDB_EUNINITBIT          0x0007U
+#define MDB_ECROSSDRAFTBIT      0x0008U
 
 #define MDB_ENONE               0x00000000U
 #define MDB_EMEM                0x00000002U
@@ -27,3 +28,4 @@ typedef struct MDB_error {
 #define MDB_EINCOMPLETEDRAFT    0x00000020U
 #define MDB_EINTOVERFLOW        0x00000040U
 #define MDB_EUNINIT             0x00000080U
+#define MDB_ECROSSDRAFT         0x00000100U

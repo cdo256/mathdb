@@ -19,6 +19,7 @@ clean :
 	rm $(OBJS) test
 
 fuzztest.o : fuzztest.c $(HEADERS)
+mdb_error.o : mdb_error.c $(HEADERS)
 mdb_generic_map.o : mdb_generic_map.c $(HEADERS)
 mdb_mem.o : mdb_mem.c $(HEADERS)
 mdb_multiset.o : mdb_multiset.c $(HEADERS)

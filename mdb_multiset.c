@@ -10,7 +10,8 @@ UP MDB_MSetAdd(MDB_mset* s, UP x) {
     check_inv(s);
     if (s->s == s->c) {
         UP c = s->c ? s->c*2 : 1;
-        if (c <= s->c) return ~0ULL;//int of
+        //TODO: Distinguish between integer overflow and oom
+        if (c <= s->c) return ~0ULL; // integer overflow
         UP* a = realloc(s->a, c*PS);
         if (!a) return ~0ULL;
         s->a = a; s->c = c;

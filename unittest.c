@@ -421,7 +421,7 @@ int Test(int i, int fn, char const** name) {
             ND n2 = MDB_DraftNode(s2, MDB_POCKET);
             MDB_AddLink(n1, MDB_ELEM, n2);
             MDB_error e;
-            check(MDB_GetError(&e,1) && e.id == MDB_EINVARG);
+            check(MDB_GetError(&e,1) && e.id == MDB_ECROSSDRAFT);
             check(!MDB_GetError(&e,0));
             MDB_FreeGraph();
             return PASS;
