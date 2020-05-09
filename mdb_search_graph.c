@@ -52,8 +52,10 @@ MDB_NODE MDB_stdcall MDB_MatchAllNodes(
     MDB_SetDraftRoot(s, output);
     for (UP i = 0; i < MDB_ChildCount(collection); i++) {
         MDB_NODEMAP m = MDB_MatchPattern(pattern, MDB_Child(collection,i), capture);
-        if (m) MDB_AddLink(output, MDB_ELEM, MDB_Child(collection,i));
-        MDB_FreeNodeMap(m);
+        if (m) {
+		MDB_AddLink(output, MDB_ELEM, MDB_Child(collection,i));
+        	MDB_FreeNodeMap(m);
+	}
     }
     MDB_CommitDraft(s);
     return output;
