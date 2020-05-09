@@ -1,8 +1,11 @@
 #include "mdb_global.h"
 #if 1
 #include "mdb_graph.h" //IMPLEMENTS
+#include "mdb_error.h"
+#include "mdb_alloc_mem.h"
 #include "mdb_all_multiset.h"
 #include "mdb_all_vector.h"
+#include <string.h>
 #include <stdio.h>
 
 #define log(...) fprintf(stderr, __VA_ARGS__)
@@ -46,8 +49,8 @@ static void mdb_FreeNode(mdb_node* n) {
         assert(!~MDB_MSetContains(&g.nodes, (UP)n));
         MDB_FreeVector(&n->out);
         MDB_FreeMSet(&n->in);
-        free(n->name);
-        free(n);
+        MDB_Free(n->name);
+        MDB_Free(n);
     }
 }
 
@@ -59,7 +62,7 @@ void MDB_stdcall MDB_FreeGraph(void) {
     for (UP i = g.drafts.s-1; ~i; i--) {
         mdb_draft* d = (mdb_draft*)g.drafts.a[i];
         MDB_FreeMSet(&d->n);
-        free(d);
+        MDB_Free(d);
     }
     MDB_FreeMSet(&g.nodes);
     MDB_FreeMSet(&g.drafts);
@@ -70,7 +73,7 @@ MDB_DRAFT MDB_stdcall
 MDB_StartDraft(void) {
     if (g.badbit) return 0;
     log("MDB_StartDraft(): ");
-    mdb_draft* d = malloc(sizeof(mdb_draft));
+    mdb_draft* d = MDB_Alloc(sizeof(mdb_draft));
     if (!d) {g.badbit = 1; return 0;}
     *d = (mdb_draft){
         .n = {0},
@@ -88,7 +91,7 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
     if (g.badbit) return 0;
     log("MDB_DraftNode(draft: %x, type: %x): ", (u32)draft, (u32)type);
     mdb_draft* d = (mdb_draft*)draft;
-    mdb_node* n = malloc(sizeof(mdb_node));
+    mdb_node* n = MDB_Alloc(sizeof(mdb_node));
     if (!n) {g.badbit = 1; return 0;}
     *n = (mdb_node){
         .type = type,
@@ -104,7 +107,7 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
         MDB_MSetRemove(&d->n, node);
     }
     g.badbit = 1;
-    free(n);
+    MDB_Free(n);
     return 0;
 }
 MDB_NODE MDB_stdcall
@@ -112,13 +115,13 @@ MDB_CreateConst(const char* name) {
     if (g.badbit) return 0;
     log("MDB_CreateConst(name: %s): ", name);
     UP len = strlen(name)+1;
-    mdb_node* n = malloc(sizeof(mdb_node));
+    mdb_node* n = MDB_Alloc(sizeof(mdb_node));
     if (!n) {g.badbit = 1; return 0;}
     *n = (mdb_node){
         .type = MDB_CONST,
-        .name = malloc(len),
+        .name = MDB_Alloc(len),
     };
-    if (!n->name) {free(n); g.badbit = 1; return 0;}
+    if (!n->name) {MDB_Free(n); g.badbit = 1; return 0;}
     strcpy(n->name, name);
     MDB_NODE node = (MDB_NODE)n;
     if (~MDB_MSetAdd(&g.nodes, node)) {
@@ -126,7 +129,7 @@ MDB_CreateConst(const char* name) {
         return node;
     }
     g.badbit = 1;
-    free(n);
+    MDB_Free(n);
     return 0;
 }
 void MDB_stdcall
@@ -197,7 +200,7 @@ MDB_DiscardDraft(MDB_DRAFT draft) {
     for (UP i = 0; i < d->n.s; i++)
         mdb_FreeNode((mdb_node*)d->n.a[i]);
     MDB_FreeMSet(&d->n);
-    free(d);
+    MDB_Free(d);
     MDB_MSetRemove(&g.drafts,draft);
     log("done\n");
 }
@@ -230,7 +233,7 @@ MDB_CommitDraft(MDB_DRAFT draft) {
         }
     }
     MDB_FreeMSet(&d->n);
-    free(d);
+    MDB_Free(d);
     log("1\n");
     return 1;
 }

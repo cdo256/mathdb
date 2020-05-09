@@ -1,9 +1,8 @@
 CFLAGS = -Wall -Werror -Wextra -pedantic \
 	-Wshadow -Winvalid-pch -Wcast-align -Wformat=2 \
-	-Wformat-nonliteral -Wmissing-declarations \
-	-Wmissing-format-attribute \
+	-Wformat-nonliteral -Wmissing-format-attribute \
 	-Wmissing-include-dirs -Wredundant-decls \
-	-Wswitch-default -g
+	-Wswitch-default -g -fdiagnostics-color
 
 SOURCES = $(wildcard *.c)
 HEADERS = $(wildcard *.h)

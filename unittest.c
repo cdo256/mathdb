@@ -8,6 +8,8 @@
 #include "mdb_free_node_map.h"
 #include "mdb_use_node_map.h"
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #define PASS 1
 #define FAIL 0
 

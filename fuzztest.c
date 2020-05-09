@@ -1,7 +1,14 @@
 #include "mdb_global.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include "mdb_util.h"
 #include "mdb_manage.h"
+#include "mdb_alloc_mem.h"
 #include "mdb_all_generic_map.h"
+#include "mdb_read_graph.h"
+#include "mdb_edit_graph.h"
 #define calloc MDB_CAlloc
 #define malloc MDB_Alloc
 #define free MDB_Free
