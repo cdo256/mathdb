@@ -3,5 +3,5 @@
 
 typedef struct MDB_generic_map {
     uintptr_t c,s,d;
-    VAL* a;
+    uintptr_t* a;
 } MDB_generic_map;

@@ -1,20 +1,19 @@
 #include "mdb_global.h"
 #include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
 #include "mdb_manage.h"
 #include "mdb_all_generic_map.h"
-#include "mdb_read_graph.h"
-#include "mdb_edit_graph.h"
-#include "mdb_util.h"
+#define calloc MDB_CAlloc
+#define malloc MDB_Alloc
+#define free MDB_Free
+#define realloc MDB_Realloc
+
 #define MAX_DRAFT 10
 #define MAX_NODE 40
 #define MAX_MAP 11
 
 typedef struct id_array {
     UP c, s;
-    VAL* a;
+    UP* a;
 } id_array;
 
 uintptr_t* FirstBlank(id_array* a) {
@@ -49,9 +48,9 @@ typedef struct draft_info {
 } draft_info;
 
 void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s32* sNonEmpty, id_array* n, s32* nUnreferenced, s32* sNonEmptyUnrooted) {
-    node_info** k = (node_info**)MDB_GLookup(nm, nd);
-    node_info* ni = k[1];
-    draft_info* si = MDB_GLookup(sm, ni->draft)[1];
+    UP* k = MDB_GLookup(nm,nd);
+    node_info* ni = (node_info*)k[1];
+    draft_info* si = (draft_info*)MDB_GLookup(sm,ni->draft)[1];
     si->size--;
     if (si->size!=0)--*sNonEmpty;
     if (si->root==nd)*sNonEmptyUnrooted+=(si->size!=0),si->root=0;
@@ -63,8 +62,8 @@ void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s3
             if (!MDB_Child(nd,i)) {notSat = 1; continue;}
             //TODO: do I need to have a special case for self-loops?
             // do I need to handle all cycles specially?
-            node_info* dni = MDB_GLookup(nm, MDB_Child(nd, i))[1];
-            if (~(UP)dni && MDB_Child(nd, i) != nd && dni->rc-- == 1)
+            UP dni = MDB_GLookup(nm,MDB_Child(nd,i))[1];
+            if (~dni && MDB_Child(nd,i) != nd && ((node_info*)dni)->rc--==1)
                 --*nUnreferenced;
         }
         si->nonSaturated -= notSat;

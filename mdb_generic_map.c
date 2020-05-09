@@ -1,11 +1,13 @@
 #include <stdlib.h>
+#include <string.h>
 #include "mdb_global.h"
 #include "mdb_all_generic_map.h" //IMPLEMENTS
+#include "mdb_alloc_mem.h"
+
 #define calloc MDB_CAlloc
 #define malloc MDB_Alloc
 #define free MDB_Free
 #define realloc MDB_Realloc
-UP const deleted_cell; //dummy, only address should be used
 
 MDB_generic_map* MDB_stdcall MDB_CreateGMap(uintptr_t size) {
     MDB_generic_map* m = malloc(sizeof(MDB_generic_map));
@@ -25,15 +27,14 @@ void MDB_stdcall MDB_FreeGMap(MDB_generic_map* map) {
 // all odd cells are the rhs
 // the pattern [0,0] means that a cell hasn't been inited
 // the pattern [0,~0] means that a cell has been delete
-VAL* MDB_stdcall MDB_GLookup(MDB_generic_map* map, VAL v) {
+uintptr_t* MDB_stdcall MDB_GLookup(MDB_generic_map* map, uintptr_t n) {
     uintptr_t h = 0;
-    UP n = (UP)v;
     MDB_generic_map* m = map;
-    for (UP i = 0; i < PS; i++)
+    for (int i =0;i<PS;i++)
         h=h*65599U+((n>>(i*8U))&255U);
     h%=m->s;
-    VAL* p = &m->a[h * 2];
-    VAL* d = 0;
+    uintptr_t* p = &m->a[h*2];
+    uintptr_t* d = 0;
     while ((p[0]||p[1])&&p[0]!=n) {
         if (!p[0]&&p[1]) d= p;
         p+=2;
@@ -48,7 +49,7 @@ int32_t MDB_stdcall MDB_GrowGMap(MDB_generic_map* m, uintptr_t c) {
     m->c+=c;
     if (m->c*3 >= 2*m->s) {
         MDB_generic_map nm = *m;
-        nm.s *= 1 + ((m->c - m->d) * 2 > m->s);//no need to double if we're full of deleted_cell
+        nm.s*=1+((m->c-m->d)*2>m->s);//no need to double if we're full of deleted
         nm.a = malloc(2*nm.s*PS);
         if (!nm.a) return 0;
         memset(nm.a,0,2*nm.s*PS);
