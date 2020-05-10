@@ -56,7 +56,7 @@ static void mdb_FreeNode(mdb_node* n) {
 
 void MDB_stdcall MDB_FreeGraph(void) {
     log("MDB_FreeGraph(): ");
-    g.error &= MDB_EUNINIT;
+    g.error |= MDB_EUNINIT;
     // go backwards since removing from the end doesn't affect the other elems
     for (UP i = g.nodes.s-1; ~i; i--) mdb_FreeNode((mdb_node*)g.nodes.a[i]);
     for (UP i = g.drafts.s-1; ~i; i--) {
@@ -75,7 +75,7 @@ MDB_StartDraft(void) {
     log("MDB_StartDraft(): ");
     mdb_draft* d = MDB_Alloc(sizeof(mdb_draft));
     if (!d) {
-        g.error &= MDB_EMEM;
+        g.error |= MDB_EMEM;
         return 0;
     }
     *d = (mdb_draft){
@@ -86,7 +86,7 @@ MDB_StartDraft(void) {
         log("%x\n", (u32)draft);
         return draft;
     } else {
-        g.error &= MDB_EMEM;
+        g.error |= MDB_EMEM;
         return 0;
     }
 }
@@ -96,7 +96,7 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
     log("MDB_DraftNode(draft: %x, type: %x): ", (u32)draft, (u32)type);
     mdb_draft* d = (mdb_draft*)draft;
     mdb_node* n = MDB_Alloc(sizeof(mdb_node));
-    if (!n) {g.error &= MDB_EMEM; return 0;}
+    if (!n) {g.error |= MDB_EMEM; return 0;}
     *n = (mdb_node){
         .type = type,
         .name = 0,
@@ -108,13 +108,13 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
             log("%x\n",(u32)node);
             return node;
         } else {
-            g.error &= MDB_EMEM;
+            g.error |= MDB_EMEM;
             MDB_MSetRemove(&d->n, node);
             MDB_Free(n);
             return 0;
         }
     } else {
-        g.error &= MDB_EMEM;
+        g.error |= MDB_EMEM;
         MDB_Free(n);
         return 0;
     }
@@ -125,13 +125,13 @@ MDB_CreateConst(const char* name) {
     log("MDB_CreateConst(name: %s): ", name);
     UP len = strlen(name)+1;
     mdb_node* n = MDB_Alloc(sizeof(mdb_node));
-    if (!n) {g.error &= MDB_EMEM; return 0;}
+    if (!n) {g.error |= MDB_EMEM; return 0;}
     *n = (mdb_node){
         .type = MDB_CONST,
         .name = MDB_Alloc(len),
     };
     if (!n->name) {
-        MDB_Free(n); g.error &= MDB_EMEM; return 0;
+        MDB_Free(n); g.error |= MDB_EMEM; return 0;
     }
     strcpy(n->name, name);
     MDB_NODE node = (MDB_NODE)n;
@@ -139,7 +139,7 @@ MDB_CreateConst(const char* name) {
         log("%x\n",(u32)node);
         return node;
     } else {
-        g.error &= MDB_EMEM;
+        g.error |= MDB_EMEM;
         MDB_Free(n);
         return 0;
     }
@@ -168,23 +168,23 @@ static UP mdb_LinkToIndex(UP end, MDB_LINKDESC link) {
 static s32 mdb_ValidateLink(mdb_node* s, MDB_LINKDESC link, mdb_node* d) {
     if (s->type == MDB_WORLD) {
         if (link != MDB_ELEM) {
-            return g.error &= MDB_EINVARG;
+            return g.error |= MDB_EINVARG;
         }
     } else {
         if (!s->draft) {
-            g.error &= MDB_EINVARG;
+            g.error |= MDB_EINVARG;
         }
         if (s->draft != d->draft) {
-            g.error &= MDB_ECROSSDRAFT;
+            g.error |= MDB_ECROSSDRAFT;
         }
         if (s->type == MDB_FORM && !(link & MDB_ARG) && link != MDB_APPLY) {
-            g.error &= MDB_EINVARG;
+            g.error |= MDB_EINVARG;
         }
         if ((s->type == MDB_WORLD || s->type == MDB_POCKET) && link != MDB_ELEM) {
-            g.error &= MDB_EINVARG;
+            g.error |= MDB_EINVARG;
         }
         if (s->type != MDB_FORM && s->type != MDB_WORLD && s->type != MDB_POCKET) {
-            g.error &= MDB_EINVARG;
+            g.error |= MDB_EINVARG;
         }
     }
     return g.error != 0;
@@ -209,7 +209,7 @@ MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
             return;
         } else if (!s->draft) MDB_MSetRemove(&d->in, src);
     }
-    g.error &= MDB_EMEM;
+    g.error |= MDB_EMEM;
 }
 
 void MDB_stdcall
@@ -292,7 +292,7 @@ int32_t MDB_stdcall MDB_GetError(MDB_error* error, int32_t clear) {
     error->id = g.error & ~MDB_EUNINIT;
     error->str = mdb_GetErrorString(error->id);
     if (clear) {
-        g.error |= MDB_EUNINIT; // Don't erase uninit bit
+        g.error &= MDB_EUNINIT; // Don't erase uninit bit
     }
     return error->id;
 }
