@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <errno.h>
 #include "mdb_util.h"
 #include "mdb_manage.h"
 #include "mdb_alloc_mem.h"
@@ -99,7 +100,7 @@ void UniformRandomFuzz(void) {
     id_array n = {.c=0,.s=MAX_NODE,.a=calloc(MAX_NODE,PS)};
     bool exit = false;
     UP steps = 0;
-    while (!exit && steps++ < 4) {
+    while (!exit && steps++ < 10) {
         if (!graphCreated) {
             fprintf(stderr, "------------------\n fuzz: %d\n",++count);
             MDB_CreateGraph(),graphCreated = true;continue;}
@@ -324,13 +325,29 @@ void UniformRandomFuzz(void) {
     MDB_FreeGMap(nm);
 }
 
-int main(void) {
+int main(int argc, char const* const* argv) {
     //MDB_InitDebug();
-    u32 seed = 477526;//(int)time(NULL);
-    srand(seed);
-    seed = (u32)rand() ^ ((u32)rand() << 16U);
-    seed =  182574442;
-    for (int i = 0 ;i<100;i++) {
+    u32 seed = 0;//(int)time(NULL);
+    int count = 100;
+    if (argc > 1) {
+        seed = (u32)strtol(argv[1], 0, 0);
+        if (errno == EINVAL || errno == ERANGE) {
+            fprintf(stderr, "invalid argument.\n");
+            exit(2);
+        }
+        if (argc == 3) {
+            count = (int)strtol(argv[2], 0, 0);
+            if (errno == EINVAL || errno == ERANGE) {
+                fprintf(stderr, "invalid argument.\n");
+                exit(2);
+            }
+        } else if (argc == 2) {
+            count = 1;
+        } else {
+            fprintf(stderr, "too many arguments.\n");
+        }
+    }
+    for (int i = 0 ;i<count;i++) {
         srand((int)seed);
         //s32 allocations = MDB_GetAllocatedBlockCount();
         fprintf(stderr, "testing with seed %d.\n", seed);
