@@ -87,7 +87,6 @@ void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s3
 }
 
 void UniformRandomFuzz(void) {
-    s32 count = 0;
     bool graphCreated = false;
     id_array nodeTypes = {3,3,calloc(3,PS)};
     memcpy(nodeTypes.a,(MDB_NODETYPE[]){MDB_FORM,MDB_POCKET,MDB_WORLD},3*PS);
@@ -100,9 +99,10 @@ void UniformRandomFuzz(void) {
     id_array n = {.c=0,.s=MAX_NODE,.a=calloc(MAX_NODE,PS)};
     bool exit = false;
     UP steps = 0;
-    while (!exit && steps++ < 10) {
+    while (!exit) {
+        steps++;
         if (!graphCreated) {
-            fprintf(stderr, "------------------\n fuzz: %d\n",++count);
+            fprintf(stderr, "------------------\n");
             MDB_CreateGraph(),graphCreated = true;continue;}
         cont: switch (rand()%9) {
             case 0: MDB_FreeGraph();
