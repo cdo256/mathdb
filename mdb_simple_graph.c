@@ -13,6 +13,7 @@
 
 typedef struct mdb_graph {
     u32 error;
+    s32 errorBreakpointsEnabled;
     MDB_mset nodes,drafts;
 } mdb_graph;
 static mdb_graph g = {.error = MDB_EUNINIT};
@@ -32,10 +33,23 @@ typedef struct mdb_node {
     MDB_vector out;
 } mdb_node;
 
+
+void MDB_stdcall MDB_SetErrorBreakpointsEnabled(s32 enable) {
+    g.errorBreakpointsEnabled = enable;
+}
+
+static void mdb_RaiseError(u32 error) {
+    g.error |= error;
+    if (g.errorBreakpointsEnabled) {
+        assert(0);
+    }
+}
+
 void MDB_stdcall MDB_CreateGraph(void) {
     log("MDB_CreateGraph(): ");
     assert(g.error & MDB_EUNINIT);
     g = (mdb_graph){
+        .errorBreakpointsEnabled = 1,
         .error = MDB_ENONE,
         .nodes = {0},
         .drafts = {0},
@@ -56,7 +70,8 @@ static void mdb_FreeNode(mdb_node* n) {
 
 void MDB_stdcall MDB_FreeGraph(void) {
     log("MDB_FreeGraph(): ");
-    g.error |= MDB_EUNINIT;
+    assert(!(g.error & MDB_EUNINIT));
+    g.error |= MDB_EUNINIT; // don't raise because this isn't really an error
     // go backwards since removing from the end doesn't affect the other elems
     for (UP i = g.nodes.s-1; ~i; i--) mdb_FreeNode((mdb_node*)g.nodes.a[i]);
     for (UP i = g.drafts.s-1; ~i; i--) {
@@ -75,7 +90,7 @@ MDB_StartDraft(void) {
     log("MDB_StartDraft(): ");
     mdb_draft* d = MDB_Alloc(sizeof(mdb_draft));
     if (!d) {
-        g.error |= MDB_EMEM;
+        mdb_RaiseError(MDB_EMEM);
         return 0;
     }
     *d = (mdb_draft){
@@ -86,7 +101,8 @@ MDB_StartDraft(void) {
         log("%x\n", (u32)draft);
         return draft;
     } else {
-        g.error |= MDB_EMEM;
+        mdb_RaiseError(MDB_EMEM);
+        assert(0);
         return 0;
     }
 }
@@ -96,7 +112,10 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
     log("MDB_DraftNode(draft: %x, type: %x): ", (u32)draft, (u32)type);
     mdb_draft* d = (mdb_draft*)draft;
     mdb_node* n = MDB_Alloc(sizeof(mdb_node));
-    if (!n) {g.error |= MDB_EMEM; return 0;}
+    if (!n) {
+        mdb_RaiseError(MDB_EMEM);
+        return 0;
+    }
     *n = (mdb_node){
         .type = type,
         .name = 0,
@@ -108,13 +127,13 @@ MDB_DraftNode(MDB_DRAFT draft, MDB_NODETYPE type) {
             log("%x\n",(u32)node);
             return node;
         } else {
-            g.error |= MDB_EMEM;
+            mdb_RaiseError(MDB_EMEM);
             MDB_MSetRemove(&d->n, node);
             MDB_Free(n);
             return 0;
         }
     } else {
-        g.error |= MDB_EMEM;
+        mdb_RaiseError(MDB_EMEM);
         MDB_Free(n);
         return 0;
     }
@@ -125,13 +144,18 @@ MDB_CreateConst(const char* name) {
     log("MDB_CreateConst(name: %s): ", name);
     UP len = strlen(name)+1;
     mdb_node* n = MDB_Alloc(sizeof(mdb_node));
-    if (!n) {g.error |= MDB_EMEM; return 0;}
+    if (!n) {
+        mdb_RaiseError(MDB_EMEM);
+        return 0;
+    }
     *n = (mdb_node){
         .type = MDB_CONST,
         .name = MDB_Alloc(len),
     };
     if (!n->name) {
-        MDB_Free(n); g.error |= MDB_EMEM; return 0;
+        MDB_Free(n);
+        mdb_RaiseError(MDB_EMEM);
+        return 0;
     }
     strcpy(n->name, name);
     MDB_NODE node = (MDB_NODE)n;
@@ -139,7 +163,7 @@ MDB_CreateConst(const char* name) {
         log("%x\n",(u32)node);
         return node;
     } else {
-        g.error |= MDB_EMEM;
+        mdb_RaiseError(MDB_EMEM);
         MDB_Free(n);
         return 0;
     }
@@ -168,26 +192,26 @@ static UP mdb_LinkToIndex(UP end, MDB_LINKDESC link) {
 static s32 mdb_ValidateLink(mdb_node* s, MDB_LINKDESC link, mdb_node* d) {
     if (s->type == MDB_WORLD) {
         if (link != MDB_ELEM) {
-            return g.error |= MDB_EINVARG;
+            mdb_RaiseError(MDB_EINVARG);
         }
     } else {
         if (!s->draft) {
-            g.error |= MDB_EINVARG;
+            mdb_RaiseError(MDB_EINVARG);
         }
-        if (s->draft != d->draft) {
-            g.error |= MDB_ECROSSDRAFT;
+        if (d->draft && s->draft != d->draft) {
+            mdb_RaiseError(MDB_ECROSSDRAFT);
         }
         if (s->type == MDB_FORM && !(link & MDB_ARG) && link != MDB_APPLY) {
-            g.error |= MDB_EINVARG;
+            mdb_RaiseError(MDB_EINVARG);
         }
         if ((s->type == MDB_WORLD || s->type == MDB_POCKET) && link != MDB_ELEM) {
-            g.error |= MDB_EINVARG;
+            mdb_RaiseError(MDB_EINVARG);
         }
         if (s->type != MDB_FORM && s->type != MDB_WORLD && s->type != MDB_POCKET) {
-            g.error |= MDB_EINVARG;
+            mdb_RaiseError(MDB_EINVARG);
         }
     }
-    return g.error != 0;
+    return g.error == 0;
 }
 
 void MDB_stdcall
@@ -197,19 +221,37 @@ MDB_AddLink(MDB_NODE src, MDB_LINKDESC link, MDB_NODE dst) {
     mdb_node* s = (mdb_node*)src;
     mdb_node* d = (mdb_node*)dst;
     if (!mdb_ValidateLink(s,link,d)) {
+        log("failed\n");
         return;
     }
     UP idx = mdb_LinkToIndex(s->out.s, link);
-    if (s->draft || ~MDB_MSetAdd(&d->in, src)) {
+    if (s->draft) {
         if (~MDB_GrowVector(&s->out, idx+1, 0ULL)) {
             assert(!s->out.a[idx]);
             s->out.a[idx] = dst;
             s->out.s++;
             log("done\n");
-            return;
-        } else if (!s->draft) MDB_MSetRemove(&d->in, src);
+        } else {
+            mdb_RaiseError(MDB_EMEM);
+            log("failed");
+        }
+    } else {
+        if (~MDB_MSetAdd(&d->in, src)) {
+            if (~MDB_GrowVector(&s->out, idx+1, 0ULL)) {
+                assert(!s->out.a[idx]);
+                s->out.a[idx] = dst;
+                s->out.s++;
+                log("done\n");
+            } else {
+                MDB_MSetRemove(&d->in, src);
+                mdb_RaiseError(MDB_EMEM);
+                log("failed\n");
+            }
+        } else {
+            mdb_RaiseError(MDB_EMEM);
+            log("failed\n");
+        }
     }
-    g.error |= MDB_EMEM;
 }
 
 void MDB_stdcall

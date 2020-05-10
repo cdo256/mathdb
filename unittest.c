@@ -419,7 +419,9 @@ int Test(int i, int fn, char const** name) {
             SK s2 = MDB_StartDraft();
             ND n1 = MDB_DraftNode(s1, MDB_POCKET);
             ND n2 = MDB_DraftNode(s2, MDB_POCKET);
+            MDB_SetErrorBreakpointsEnabled(0);
             MDB_AddLink(n1, MDB_ELEM, n2);
+            MDB_SetErrorBreakpointsEnabled(1);
             MDB_error e;
             check(MDB_GetError(&e,1) && e.id == MDB_ECROSSDRAFT);
             check(!MDB_GetError(&e,0));
@@ -437,7 +439,11 @@ int Test(int i, int fn, char const** name) {
             n2=MDB_DraftNode(s1, MDB_FORM);
             s2=MDB_StartDraft();
             n3=MDB_DraftNode(s2, MDB_FORM);
+            MDB_SetErrorBreakpointsEnabled(0);
             MDB_AddLink(n2, MDB_APPLY, n3);
+            MDB_error e;
+            check(MDB_GetError(&e,1) && e.id == MDB_ECROSSDRAFT);
+            MDB_SetErrorBreakpointsEnabled(1);
             MDB_DraftNode(s1, MDB_POCKET);
             s3=MDB_StartDraft();
             MDB_CreateConst("b");
