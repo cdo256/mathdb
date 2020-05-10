@@ -323,7 +323,7 @@ void UniformRandomFuzz(void) {
     MDB_FreeGMap(sm);
     MDB_FreeGMap(nm);
 }
-#if 0
+
 int main(void) {
     //MDB_InitDebug();
     u32 seed = 477526;//(int)time(NULL);
@@ -340,4 +340,3 @@ int main(void) {
         seed++;
     }
 }
-#endif

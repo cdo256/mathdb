@@ -4,15 +4,18 @@ CFLAGS = -Wall -Werror -Wextra -pedantic \
 	-Wmissing-include-dirs -Wredundant-decls \
 	-Wswitch-default -g -fdiagnostics-color
 
-SOURCES = $(wildcard *.c)
+SOURCES = $(wildcard mdb_*.c)
 HEADERS = $(wildcard *.h)
 OBJS = $(SOURCES:.c=.o)
 
 .PHONY : all
-all : test
+all : unittest fuzztest
 
-test : $(OBJS)
-	$(CC) $(CFLAGS) -o test $(OBJS) $(LFLAGS) $(LIBS)
+unittest : unittest.o $(OBJS)
+	$(CC) $(CFLAGS) -o unittest unittest.o $(OBJS) $(LFLAGS) $(LIBS)
+
+fuzztest : fuzztest.o $(OBJS)
+	$(CC) $(CFLAGS) -o fuzztest fuzztest.o $(OBJS) $(LFLAGS) $(LIBS)
 
 .PHONY : clean
 clean :
