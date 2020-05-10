@@ -60,9 +60,9 @@ void PrepareNodeRemove(MDB_NODE nd, MDB_generic_map* sm, MDB_generic_map* nm, s3
     node_info* ni = (node_info*)k[1];
     draft_info* si = (draft_info*)MDB_GLookup(sm,ni->draft)[1];
     si->size--;
-    if (si->size!=0)--*sNonEmpty;
+    if (si->size==0)--*sNonEmpty;
     if (si->root==nd)*sNonEmptyUnrooted+=(si->size!=0),si->root=0;
-    else if (si->size!=0) --*sNonEmptyUnrooted;
+    else if (si->size==0 && !si->root) --*sNonEmptyUnrooted;
     UP notSat = 0;
     UP childCount = MDB_ChildCount(nd);
     if (childCount > 0) {
